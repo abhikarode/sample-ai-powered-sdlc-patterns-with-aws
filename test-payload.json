@@ -1,0 +1,8 @@
+{
+  "httpMethod": "POST",
+  "path": "/chat/ask",
+  "body": "{\"question\":\"test\"}",
+  "headers": {
+    "Content-Type": "application/json"
+  }
+}
