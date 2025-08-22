@@ -1,38 +1,88 @@
-## AI-Powered Software Development with AWS - Patterns/Agents Collection
+# AI Assistant - Complete Implementation
 
-This repo contains AI-powered software development patterns showing how to integrate generative AI in different stages of software development lifecycle using Amazon Q Developer, Amazon Q Business and Amazon Bedrock. This collection of patterns demonstrates practical approaches for leveraging AWS's generative AI capabilities across the software development lifecycle (SDLC). The patterns are designed to help development teams enhance productivity, improve  quality, and accelerate delivery through AI-powered development.
+This repository contains a fully deployed AI Assistant application built with AWS services, demonstrating enterprise-grade AI-powered document management and chat capabilities using Amazon Bedrock Knowledge Base.
 
-Important: this patterns use various AWS services and there are costs associated with these services - please see the [AWS Pricing page](https://aws.amazon.com/pricing/) for details. You are responsible for any AWS costs incurred. No warranty is implied in this example.
+## 🚀 **Live Application**
+- **Frontend**: https://diaxl2ky359mj.cloudfront.net
+- **Status**: Fully deployed and operational in AWS us-west-2
 
-### Key AWS Services Used
-[Amazon Q Developer](https://aws.amazon.com/q/developer/)
-[Amazon Q Business](https://aws.amazon.com/q/business/)
-[Amazon Bedrock](https://aws.amazon.com/bedrock/)
+## 🏗️ **Architecture Overview**
 
-## Deployment Instructions
+### **Core AWS Services**
+- **Amazon Bedrock Knowledge Base** - RAG (Retrieval-Augmented Generation) with Claude Sonnet 4
+- **Amazon S3** - Document storage and frontend hosting
+- **Amazon OpenSearch Serverless** - Vector search for semantic document retrieval
+- **Amazon DynamoDB** - Document metadata and conversation storage
+- **Amazon Cognito** - User authentication and authorization
+- **AWS Lambda** - Serverless backend functions (6 functions)
+- **Amazon API Gateway** - REST API with Cognito integration
+- **Amazon CloudFront** - Global CDN for frontend delivery
+- **Amazon CloudWatch** - Monitoring, logging, and alerting
 
-1. [Create an AWS account](https://portal.aws.amazon.com/gp/aws/developer/registration/index.html) if you do not already have one and login.
+### **Application Features**
+- 🤖 **AI Chat Interface** - Conversational AI with document context
+- 📄 **Document Management** - Upload, view, delete documents with Knowledge Base sync
+- 👥 **User Authentication** - Secure login with Cognito
+- 📊 **Admin Dashboard** - System analytics and user management
+- 📱 **Responsive Design** - Works on desktop and mobile
+- 🔍 **Semantic Search** - AI-powered document search and retrieval
 
-2. [Install Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) on your local machine.
-
-3. Create a new directory and navigate to that directory in a terminal.
-
-4. Clone this repo.
+## 📁 **Repository Structure**
 
 ```
-git clone https://github.com/aws-samples/sample-ai-powered-sdlc-patterns-with-aws
+├── terraform/                 # Infrastructure as Code (Terraform)
+│   ├── main.tf               # Core infrastructure definition
+│   ├── modules/              # Reusable Terraform modules
+│   │   ├── api-gateway/      # API Gateway configuration
+│   │   ├── cloudfront/       # CDN and frontend hosting
+│   │   ├── cognito/          # Authentication
+│   │   ├── dynamodb/         # Database tables
+│   │   ├── iam/              # IAM roles and policies
+│   │   ├── lambda/           # Lambda functions (6 functions)
+│   │   └── monitoring/       # CloudWatch monitoring
+│   └── environments/         # Environment-specific configs
+├── frontend/                 # React TypeScript application
+│   ├── src/                  # Source code
+│   │   ├── components/       # React components
+│   │   ├── pages/            # Application pages
+│   │   ├── services/         # API integration
+│   │   └── contexts/         # React contexts
+│   └── tests/                # Frontend tests
+├── __tests__/                # End-to-end Playwright tests
+└── .kiro/                    # Development configuration
+    ├── specs/                # Feature specifications
+    └── steering/             # Development guidelines
 ```
-Each subdirectory contains additional installation and usage instructions.
 
-## Patterns Categories
+## 🛠️ **Deployment Instructions**
 
-This repository organizes patterns by SDLC phases. 
-1. Requirement & Planning
-2. Design & Architecture
-3. Implementation
-4. Testing
-5. Deployment
-6. Operation & Maintenance
+### **Prerequisites**
+1. AWS Account with appropriate permissions
+2. AWS CLI configured with `aidlc_main` profile
+3. Terraform installed
+4. Node.js and npm installed
+
+### **Quick Deploy**
+```bash
+# Clone repository
+git clone https://github.com/abhikarode/sample-ai-powered-sdlc-patterns-with-aws.git
+cd sample-ai-powered-sdlc-patterns-with-aws
+
+# Deploy infrastructure
+cd terraform
+terraform init
+terraform plan
+terraform apply
+
+# Deploy frontend
+cd ../frontend
+npm install
+npm run build
+# Frontend automatically deployed to S3/CloudFront via Terraform
+```
+
+### **Environment Configuration**
+All resources are deployed in **us-west-2** region using the **aidlc_main** AWS profile.
 
 ## Security
 
