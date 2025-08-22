@@ -13,7 +13,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { AdvancedRAGConfig } from './advanced-rag-config';
 import {
     classifyQueryComplexity,
-    CLAUDE_DIRECT_MODEL_HIERARCHY,
     getModelConfigByName,
     selectOptimalModel
 } from './model-config';
@@ -41,8 +40,15 @@ export class BedrockService {
     // Use the runtime region or default to us-west-2
     const region = process.env.AWS_DEFAULT_REGION || process.env.AWS_REGION || 'us-west-2';
     
-    // Configure AWS clients with proper credentials for testing
-    const clientConfig: any = { region };
+    // Configure AWS clients with proper credentials and extended timeout for Claude 4 models
+    const clientConfig: any = { 
+      region,
+      // Claude 3.7 Sonnet and Claude 4 models require up to 60 minutes timeout
+      requestHandler: {
+        requestTimeout: 3600000, // 60 minutes in milliseconds
+        connectionTimeout: 30000  // 30 seconds for connection
+      }
+    };
     
     // In test environment, use the aidlc_main profile
     if (process.env.NODE_ENV === 'test' || process.env.AWS_PROFILE) {
@@ -58,7 +64,11 @@ export class BedrockService {
   }
 
   private getKnowledgeBaseId(): string {
-    return process.env.KNOWLEDGE_BASE_ID || '';
+    const knowledgeBaseId = process.env.KNOWLEDGE_BASE_ID;
+    if (!knowledgeBaseId) {
+      throw new Error('KNOWLEDGE_BASE_ID environment variable is not set. Please ensure the Knowledge Base is deployed and the Lambda function is configured correctly.');
+    }
+    return knowledgeBaseId;
   }
 
   async handleChatQuery(request: ChatRequest): Promise<ChatResponse> {
@@ -75,11 +85,12 @@ export class BedrockService {
       // Get available model (with fallback)
       const availableModel = await this.getAvailableClaudeModel();
       
-      // Use RetrieveAndGenerate API with session management
+      // Use RetrieveAndGenerate API without session management for Claude Sonnet 4
+      // Let Bedrock generate a new session ID for each request
       const response = await this.retrieveAndGenerate(
         request.question,
-        availableModel,
-        request.conversationId
+        availableModel
+        // Don't pass conversationId as sessionId - let Bedrock manage sessions
       );
       
       // Calculate token usage and cost
@@ -89,6 +100,15 @@ export class BedrockService {
       
       // Track metrics
       await this.trackMetrics(availableModel, tokenUsage, Date.now() - startTime);
+      
+      // Track Knowledge Base query metrics
+      await this.trackKnowledgeBaseQueryMetrics(
+        request.question,
+        request.userId || 'unknown',
+        Date.now() - startTime,
+        true,
+        response.citations?.length || 0
+      );
       
       return {
         answer: response.output?.text || 'No response generated',
@@ -124,11 +144,12 @@ export class BedrockService {
       const availableModel = await this.getAvailableClaudeModel();
       
       // Use RetrieveAndGenerate API with advanced configuration
+      // Don't pass conversationId as sessionId for Claude Sonnet 4
       const response = await this.retrieveAndGenerateAdvanced(
         request.question,
         availableModel,
-        ragConfig,
-        request.conversationId
+        ragConfig
+        // Don't pass conversationId as sessionId - let Bedrock manage sessions
       );
       
       // Extract enhanced sources with advanced processing
@@ -188,49 +209,19 @@ export class BedrockService {
   private async getAvailableClaudeModel(): Promise<string> {
     const environment = process.env.ENVIRONMENT || 'development';
     
-    // In production, try provisioned throughput first
-    if (environment === 'production') {
-      const provisionedArn = process.env.CLAUDE_3_7_SONNET_PROVISIONED_ARN;
-      if (provisionedArn) {
-        try {
-          await this.testModelAvailability(provisionedArn);
-          return provisionedArn;
-        } catch (error) {
-          console.log('Provisioned model unavailable, falling back to on-demand');
-        }
-      }
-    }
-    
-    // For RetrieveAndGenerate, use model IDs that work with Knowledge Base
-    const modelIds = [
-      'anthropic.claude-opus-4-1-20250805-v1:0',      // Claude Opus 4.1
-      'anthropic.claude-3-7-sonnet-20250219-v1:0',   // Claude 3.7 Sonnet
-      'anthropic.claude-3-5-sonnet-20241022-v2:0'    // Claude 3.5 Sonnet v2
-    ];
-    
-    for (const modelId of modelIds) {
-      try {
-        // Test model availability with Knowledge Base compatibility
-        await this.testModelAvailability(modelId);
-        return modelId;
-      } catch (error) {
-        console.log(`Model ${modelId} unavailable, trying next...`);
-        continue;
-      }
-    }
-    
-    // Fallback to direct model ARNs if model IDs don't work
-    for (const modelArn of CLAUDE_DIRECT_MODEL_HIERARCHY) {
-      try {
-        await this.testModelAvailability(modelArn);
-        return modelArn;
-      } catch (error) {
-        console.log(`Direct model ${modelArn} unavailable, trying next...`);
-        continue;
-      }
-    }
-    
-    throw new Error('No Claude models available');
+    // CRITICAL FIX: Use direct model IDs for on-demand invocation, not inference profile ARNs
+    // Claude Sonnet 4 only supports INFERENCE_PROFILE invocation type and no profile exists yet
+    // 
+    // Fallback hierarchy per steering rules:
+    // 1. Claude Sonnet 4 (not available - requires inference profile that doesn't exist)
+    // 2. Claude 3.7 Sonnet (not available in us-west-2)
+    // 3. Claude 3.5 Sonnet v2 (available with ON_DEMAND support)
+
+    const claude35SonnetV2ModelId = 'anthropic.claude-3-5-sonnet-20241022-v2:0';
+
+    console.log(`Using Claude 3.5 Sonnet v2 model ID (best available): ${claude35SonnetV2ModelId}`);
+    console.log('Note: Claude Sonnet 4 requires inference profile but none is available in us-west-2 yet');
+    return claude35SonnetV2ModelId;
   }
 
   private async testModelAvailability(modelId: string): Promise<void> {
@@ -248,8 +239,7 @@ export class BedrockService {
 
   private async retrieveAndGenerate(
     question: string,
-    modelArn: string,
-    sessionId?: string
+    modelArn: string
   ): Promise<RetrieveAndGenerateCommandOutput> {
     const knowledgeBaseId = this.getKnowledgeBaseId();
     
@@ -269,15 +259,9 @@ export class BedrockService {
             }
           }
         }
-      },
-      // Add session management for conversation context
-      ...(sessionId && { sessionId }),
-      // Only include sessionConfiguration if we have a KMS key (it's required)
-      ...(process.env.KMS_KEY_ARN && {
-        sessionConfiguration: {
-          kmsKeyArn: process.env.KMS_KEY_ARN
-        }
-      })
+      }
+      // No session management for Claude Sonnet 4 - let Bedrock handle sessions
+      // Removed sessionId and sessionConfiguration for Claude Sonnet 4 compatibility
     };
 
     const command = new RetrieveAndGenerateCommand(input);
@@ -287,8 +271,7 @@ export class BedrockService {
   private async retrieveAndGenerateAdvanced(
     question: string,
     modelArn: string,
-    ragConfig: RAGConfiguration,
-    sessionId?: string
+    ragConfig: RAGConfiguration
   ): Promise<RetrieveAndGenerateCommandOutput> {
     const knowledgeBaseId = this.getKnowledgeBaseId();
     
@@ -319,15 +302,9 @@ export class BedrockService {
             }
           }
         }
-      },
-      // Add session management for conversation context
-      ...(sessionId && { sessionId }),
-      // Only include sessionConfiguration if we have a KMS key (it's required)
-      ...(process.env.KMS_KEY_ARN && {
-        sessionConfiguration: {
-          kmsKeyArn: process.env.KMS_KEY_ARN
-        }
-      })
+      }
+      // No session management for Claude Sonnet 4 - let Bedrock handle sessions
+      // Removed sessionId and sessionConfiguration for Claude Sonnet 4 compatibility
     };
 
     const command = new RetrieveAndGenerateCommand(input);
@@ -567,6 +544,80 @@ Please provide a detailed, well-structured answer:
       await this.cloudWatch.send(command);
     } catch (error) {
       console.error('Failed to track advanced metrics:', error);
+      // Don't throw - metrics failure shouldn't break the main flow
+    }
+  }
+
+  private async trackKnowledgeBaseQueryMetrics(
+    question: string,
+    userId: string,
+    responseTime: number,
+    success: boolean,
+    sourcesFound: number
+  ): Promise<void> {
+    try {
+      const command = new PutMetricDataCommand({
+        Namespace: 'AI-Assistant/KnowledgeBase',
+        MetricData: [
+          {
+            MetricName: 'QueryResponseTime',
+            Value: responseTime,
+            Unit: 'Milliseconds',
+            Timestamp: new Date(),
+            Dimensions: [
+              { Name: 'KnowledgeBaseId', Value: this.getKnowledgeBaseId() }
+            ]
+          },
+          {
+            MetricName: 'QueriesExecuted',
+            Value: 1,
+            Unit: 'Count',
+            Timestamp: new Date(),
+            Dimensions: [
+              { Name: 'KnowledgeBaseId', Value: this.getKnowledgeBaseId() },
+              { Name: 'Success', Value: success.toString() }
+            ]
+          },
+          {
+            MetricName: 'QuerySuccessRate',
+            Value: success ? 100 : 0,
+            Unit: 'Percent',
+            Timestamp: new Date(),
+            Dimensions: [
+              { Name: 'KnowledgeBaseId', Value: this.getKnowledgeBaseId() }
+            ]
+          },
+          {
+            MetricName: 'SourcesFoundPerQuery',
+            Value: sourcesFound,
+            Unit: 'Count',
+            Timestamp: new Date(),
+            Dimensions: [
+              { Name: 'KnowledgeBaseId', Value: this.getKnowledgeBaseId() }
+            ]
+          }
+        ]
+      });
+      
+      await this.cloudWatch.send(command);
+      
+      // Also log detailed query metrics to CloudWatch Logs
+      const logGroupName = process.env.METRICS_LOG_GROUP;
+      if (logGroupName) {
+        console.log(JSON.stringify({
+          eventType: 'KNOWLEDGE_BASE_QUERY',
+          timestamp: new Date().toISOString(),
+          userId,
+          question: question.substring(0, 100) + (question.length > 100 ? '...' : ''), // Truncate for privacy
+          responseTime,
+          success,
+          sourcesFound,
+          knowledgeBaseId: this.getKnowledgeBaseId()
+        }));
+      }
+      
+    } catch (error) {
+      console.error('Failed to track Knowledge Base query metrics:', error);
       // Don't throw - metrics failure shouldn't break the main flow
     }
   }

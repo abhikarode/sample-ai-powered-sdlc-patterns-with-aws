@@ -163,10 +163,13 @@ async function handleStreamingChat(
     // Get sources from Knowledge Base (without generating response)
     const ragResponse = await bedrockService.handleChatQuery(chatRequest);
     
-    // Use streaming service for response generation
+    // Use streaming service for response generation with available Claude model
+    // Use the same model selection logic as bedrock-service for consistency
+    const availableModel = 'anthropic.claude-3-5-sonnet-20241022-v2:0'; // Use direct model ID for on-demand support
+    
     const streamingResponse = await streamingService.streamChatResponse(
       chatRequest,
-      'arn:aws:bedrock:us-west-2::foundation-model/anthropic.claude-3-7-sonnet-20250219-v1:0',
+      availableModel,
       ragResponse.sources
     );
 

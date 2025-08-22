@@ -35,7 +35,9 @@ output "documents_resource_id" {
   value       = aws_api_gateway_resource.documents.id
 }
 
-output "admin_resource_id" {
-  description = "ID of the admin resource"
-  value       = aws_api_gateway_resource.admin.id
+# Admin resource is created by the admin Lambda module
+
+output "root_resource_id" {
+  description = "ID of the API Gateway root resource"
+  value       = aws_api_gateway_rest_api.ai_assistant.root_resource_id
 }

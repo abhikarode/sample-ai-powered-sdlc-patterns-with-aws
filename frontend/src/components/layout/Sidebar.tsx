@@ -3,7 +3,6 @@
 
 import { NavigationItem, SidebarProps } from '@/types/components';
 import { ROUTES } from '@/types/routes';
-import { motion } from 'framer-motion';
 import {
     FileText,
     Home,
@@ -14,6 +13,7 @@ import {
     X
 } from 'lucide-react';
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
   isOpen, 
@@ -24,7 +24,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const navigationItems: NavigationItem[] = [
     {
       path: ROUTES.HOME,
-      label: 'Home',
+      label: 'Dashboard',
       icon: 'home',
       roles: ['admin', 'user']
     },
@@ -41,7 +41,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       roles: ['admin', 'user']
     },
     {
-      path: ROUTES.ADMIN,
+      path: ROUTES.ADMIN_DASHBOARD,
       label: 'Administration',
       icon: 'admin',
       roles: ['admin']
@@ -88,13 +88,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
       )}
 
       {/* Sidebar */}
-      <motion.aside
-        initial={false}
-        animate={{
-          x: isOpen ? 0 : -320,
-        }}
-        transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        className="fixed left-0 top-16 bottom-0 z-50 w-64 backdrop-blur-xl bg-slate-900/80 border-r border-white/10 lg:translate-x-0"
+      <aside
+        className={`fixed left-0 top-16 bottom-0 z-30 w-64 backdrop-blur-xl bg-slate-900/80 border-r border-white/10 transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:z-auto ${
+          isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        }`}
       >
         <div className="flex flex-col h-full">
           {/* Close button for mobile */}
@@ -115,21 +112,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   (item.path !== ROUTES.HOME && currentPath.startsWith(item.path));
 
                 return (
-                  <motion.a
+                  <Link
                     key={item.path}
-                    href={item.path}
+                    to={item.path}
+                    onClick={onToggle}
                     className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 ${
                       isActive
                         ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg'
                         : 'text-white/70 hover:text-white hover:bg-white/10'
                     }`}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={onToggle}
                   >
                     {getIcon(item.icon || 'home')}
                     <span className="font-medium">{item.label}</span>
-                  </motion.a>
+                  </Link>
                 );
               })}
             </div>
@@ -147,7 +142,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           </div>
         </div>
-      </motion.aside>
+      </aside>
     </>
   );
 };

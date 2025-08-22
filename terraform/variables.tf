@@ -112,6 +112,13 @@ variable "chunk_overlap_percentage" {
   }
 }
 
+# Monitoring Configuration
+variable "alert_email_addresses" {
+  description = "List of email addresses to receive CloudWatch alerts"
+  type        = list(string)
+  default     = []
+}
+
 # Tags
 variable "additional_tags" {
   description = "Additional tags to apply to all resources"

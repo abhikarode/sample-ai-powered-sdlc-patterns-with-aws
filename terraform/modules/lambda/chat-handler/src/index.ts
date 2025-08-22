@@ -58,6 +58,25 @@ export const handler = async (
       queryComplexity: requestBody.queryComplexity
     };
     
+    // Validate environment variables
+    if (!process.env.KNOWLEDGE_BASE_ID) {
+      console.error('KNOWLEDGE_BASE_ID environment variable is not set');
+      return {
+        statusCode: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*'
+        },
+        body: JSON.stringify({
+          error: {
+            code: 'CONFIGURATION_ERROR',
+            message: 'Knowledge Base is not configured. Please ensure the Knowledge Base is deployed.',
+            details: 'KNOWLEDGE_BASE_ID environment variable is missing'
+          }
+        })
+      };
+    }
+
     // Process chat request with advanced RAG if enabled
     const useAdvancedRAG = process.env.ENABLE_ADVANCED_RAG === 'true' || requestBody.useAdvancedRAG;
     const response = useAdvancedRAG 

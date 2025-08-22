@@ -47,7 +47,7 @@ export const ConversationPage: React.FC = () => {
 
       const response = await fetch(`${API_CONFIG.baseURL}/chat/conversations/${convId}`, {
         headers: {
-          'Authorization': `Bearer ${accessToken}`,
+          'Authorization': accessToken,
           'Content-Type': 'application/json'
         }
       });

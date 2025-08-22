@@ -141,11 +141,14 @@ async function handleListDocuments(
       statusCode: 200,
       headers: getCorsHeaders(),
       body: JSON.stringify({
-        documents: enrichedDocuments,
-        totalCount: enrichedDocuments.length,
-        userRole,
-        timestamp: new Date().toISOString(),
-        processingTime: `${processingTime}ms`
+        success: true,
+        data: {
+          documents: enrichedDocuments,
+          totalCount: enrichedDocuments.length,
+          userRole,
+          timestamp: new Date().toISOString(),
+          processingTime: `${processingTime}ms`
+        }
       })
     };
 
@@ -229,12 +232,14 @@ async function handleDeleteDocument(
       headers: getCorsHeaders(),
       body: JSON.stringify({
         success: true,
-        message: 'Document deleted successfully',
-        documentId,
-        fileName: document.fileName,
-        knowledgeBaseCleanup: 'Will be removed from Knowledge Base during next sync',
-        timestamp: new Date().toISOString(),
-        processingTime: `${processingTime}ms`
+        data: {
+          message: 'Document deleted successfully',
+          documentId,
+          fileName: document.fileName,
+          knowledgeBaseCleanup: 'Will be removed from Knowledge Base during next sync',
+          timestamp: new Date().toISOString(),
+          processingTime: `${processingTime}ms`
+        }
       })
     };
 
@@ -299,12 +304,15 @@ async function handleDocumentProcessingStatus(
       statusCode: 200,
       headers: getCorsHeaders(),
       body: JSON.stringify({
-        statusSummary,
-        processingDocuments,
-        ingestionJobs,
-        userRole,
-        timestamp: new Date().toISOString(),
-        processingTime: `${processingTime}ms`
+        success: true,
+        data: {
+          statusSummary,
+          processingDocuments,
+          ingestionJobs,
+          userRole,
+          timestamp: new Date().toISOString(),
+          processingTime: `${processingTime}ms`
+        }
       })
     };
 
@@ -320,13 +328,14 @@ async function getAllDocuments(requestId: string): Promise<DocumentRecord[]> {
   try {
     const response = await dynamoClient.send(new ScanCommand({
       TableName: process.env.DOCUMENTS_TABLE!,
-      FilterExpression: 'SK = :sk',
+      FilterExpression: 'SK = :sk AND begins_with(PK, :docPrefix)',
       ExpressionAttributeValues: {
-        ':sk': { S: 'METADATA' }
+        ':sk': { S: 'METADATA' },
+        ':docPrefix': { S: 'DOC#' }
       }
     }));
 
-    return response.Items?.map(item => mapDynamoItemToDocument(item)) || [];
+    return response.Items?.map(item => mapDynamoItemToDocument(item)).filter((doc): doc is DocumentRecord => doc !== null) || [];
   } catch (error) {
     console.error('Error getting all documents:', { requestId, error });
     return [];
@@ -344,7 +353,7 @@ async function getUserDocuments(userId: string, requestId: string): Promise<Docu
       }
     }));
 
-    return response.Items?.map(item => mapDynamoItemToDocument(item)) || [];
+    return response.Items?.map(item => mapDynamoItemToDocument(item)).filter((doc): doc is DocumentRecord => doc !== null) || [];
   } catch (error) {
     console.error('Error getting user documents:', { requestId, userId, error });
     return [];
@@ -444,19 +453,42 @@ async function getCurrentIngestionJobs(requestId: string): Promise<IngestionJobI
   }
 }
 
-function mapDynamoItemToDocument(item: any): DocumentRecord {
+function mapDynamoItemToDocument(item: any): DocumentRecord | null {
+  // Validate that this is actually a document record
+  if (!item.PK?.S?.startsWith('DOC#') || !item.documentId?.S || !item.fileName?.S) {
+    console.warn('Invalid document record found, skipping:', { 
+      PK: item.PK?.S, 
+      hasDocumentId: !!item.documentId?.S,
+      hasFileName: !!item.fileName?.S 
+    });
+    return null;
+  }
+
+  // Validate required fields
+  const documentId = item.documentId?.S;
+  const fileName = item.fileName?.S;
+  const uploadDate = item.uploadDate?.S;
+  const uploadedBy = item.uploadedBy?.S;
+
+  if (!documentId || !fileName || !uploadDate || !uploadedBy) {
+    console.warn('Document record missing required fields, skipping:', { 
+      documentId, fileName, uploadDate, uploadedBy 
+    });
+    return null;
+  }
+
   return {
-    documentId: item.documentId?.S || '',
-    fileName: item.fileName?.S || '',
-    originalName: item.originalName?.S || '',
-    contentType: item.contentType?.S || '',
+    documentId,
+    fileName,
+    originalName: item.originalName?.S || fileName,
+    contentType: item.contentType?.S || 'application/octet-stream',
     fileSize: parseInt(item.fileSize?.N || '0'),
-    uploadedBy: item.uploadedBy?.S || '',
-    uploadDate: item.uploadDate?.S || '',
+    uploadedBy,
+    uploadDate,
     s3Key: item.s3Key?.S || '',
-    s3Bucket: item.s3Bucket?.S || '',
+    s3Bucket: item.s3Bucket?.S || process.env.DOCUMENTS_BUCKET || '',
     status: (item.status?.S || 'unknown') as DocumentStatus,
-    knowledgeBaseStatus: (item.knowledgeBaseStatus?.S || 'unknown') as KnowledgeBaseStatus,
+    knowledgeBaseStatus: (item.knowledgeBaseStatus?.S || 'pending') as KnowledgeBaseStatus,
     lastSyncDate: item.lastSyncDate?.S,
     ingestionJobId: item.ingestionJobId?.S,
     failureReason: item.failureReason?.S,
@@ -469,8 +501,11 @@ function createErrorResponse(statusCode: number, message: string): APIGatewayPro
     statusCode,
     headers: getCorsHeaders(),
     body: JSON.stringify({
-      error: message,
-      timestamp: new Date().toISOString()
+      success: false,
+      error: {
+        message: message,
+        timestamp: new Date().toISOString()
+      }
     })
   };
 }

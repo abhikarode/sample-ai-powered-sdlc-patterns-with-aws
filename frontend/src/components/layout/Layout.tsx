@@ -58,19 +58,21 @@ export const Layout: React.FC<LayoutProps> = ({
         )}
 
         {/* Main Content */}
-        <main className={`flex-1 ${showSidebar ? 'lg:ml-64' : ''} ${showHeader ? 'pt-16' : ''}`}>
+        <main className={`flex-1 transition-all duration-300 ${showSidebar ? 'lg:ml-64' : ''} ${showHeader ? 'pt-16' : ''}`}>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="p-6"
+            className="p-6 min-h-screen"
           >
             {title && (
               <div className="mb-6">
                 <h1 className="text-3xl font-bold text-white">{title}</h1>
               </div>
             )}
-            {children}
+            <div className="w-full max-w-none">
+              {children}
+            </div>
           </motion.div>
         </main>
       </div>
