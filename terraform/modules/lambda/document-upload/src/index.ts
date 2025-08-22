@@ -97,7 +97,10 @@ export const handler = async (
         statusCode: 400,
         headers: getCorsHeaders(),
         body: JSON.stringify({
-          error: 'Unsupported file type. Supported types: PDF, DOCX, TXT, MD'
+          success: false,
+          error: {
+            message: 'Unsupported file type. Supported types: PDF, DOCX, TXT, MD'
+          }
         })
       };
     }
@@ -108,7 +111,10 @@ export const handler = async (
         statusCode: 400,
         headers: getCorsHeaders(),
         body: JSON.stringify({
-          error: 'File size exceeds 10MB limit'
+          success: false,
+          error: {
+            message: 'File size exceeds 10MB limit'
+          }
         })
       };
     }
@@ -246,13 +252,15 @@ export const handler = async (
       headers: getCorsHeaders(),
       body: JSON.stringify({
         success: true,
-        documentId,
-        fileName,
-        fileSize: fileBuffer.length,
-        status: 'uploaded',
-        knowledgeBaseStatus: 'pending',
-        message: 'Document uploaded successfully and Knowledge Base sync initiated',
-        processingTime: `${processingTime}ms`
+        data: {
+          documentId,
+          fileName,
+          fileSize: fileBuffer.length,
+          status: 'uploaded',
+          knowledgeBaseStatus: 'pending',
+          message: 'Document uploaded successfully and Knowledge Base sync initiated',
+          processingTime: `${processingTime}ms`
+        }
       })
     };
 
@@ -296,7 +304,10 @@ export const handler = async (
       statusCode: 500,
       headers: getCorsHeaders(),
       body: JSON.stringify({
-        error: 'Internal server error during document upload'
+        success: false,
+        error: {
+          message: 'Internal server error during document upload'
+        }
       })
     };
   }

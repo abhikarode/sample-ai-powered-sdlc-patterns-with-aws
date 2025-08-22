@@ -31,7 +31,7 @@ resource "aws_api_gateway_integration" "chat_ask_post" {
 
   integration_http_method = "POST"
   type                   = "AWS_PROXY"
-  uri                    = aws_lambda_function.chat_handler.invoke_arn
+  uri                    = aws_lambda_function.chat_endpoints.invoke_arn
 }
 
 # OPTIONS /chat/ask method for CORS preflight
@@ -242,9 +242,9 @@ resource "aws_api_gateway_model" "chat_request" {
 
 # Lambda permissions for API Gateway
 resource "aws_lambda_permission" "chat_ask_api_gateway" {
-  statement_id  = "AllowExecutionFromAPIGateway"
+  statement_id  = "AllowExecutionFromAPIGateway-${var.project_name}-chat-ask"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.chat_handler.function_name
+  function_name = aws_lambda_function.chat_endpoints.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${var.api_gateway_execution_arn}/*/*"
 }
@@ -268,6 +268,7 @@ resource "aws_lambda_function" "chat_endpoints" {
       DOCUMENTS_TABLE     = var.documents_table_name
       LOG_LEVEL           = var.log_level
       ENABLE_ADVANCED_RAG = var.enable_advanced_rag
+      AWS_ACCOUNT_ID      = data.aws_caller_identity.current.account_id
     }
   }
 
@@ -303,9 +304,21 @@ resource "aws_lambda_function" "chat_endpoints" {
 # Package the chat endpoints Lambda function code
 data "archive_file" "chat_endpoints" {
   type        = "zip"
-  source_dir  = "${path.module}/../dist"
   output_path = "${path.module}/../chat-endpoints.zip"
+  source_dir  = "${path.module}/../"
   depends_on  = [null_resource.build_lambda]
+  
+  excludes = [
+    "src",
+    "terraform",
+    "tsconfig.json",
+    "*.ts",
+    "node_modules/@types",
+    "node_modules/typescript",
+    "node_modules/.bin",
+    "*.md",
+    ".git*"
+  ]
 }
 
 # CloudWatch Log Group for chat endpoints Lambda
@@ -322,7 +335,7 @@ resource "aws_cloudwatch_log_group" "chat_endpoints" {
 
 # Lambda permissions for chat endpoints API Gateway
 resource "aws_lambda_permission" "chat_endpoints_api_gateway" {
-  statement_id  = "AllowExecutionFromAPIGateway"
+  statement_id  = "AllowExecutionFromAPIGateway-${var.project_name}-chat-endpoints"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.chat_endpoints.function_name
   principal     = "apigateway.amazonaws.com"

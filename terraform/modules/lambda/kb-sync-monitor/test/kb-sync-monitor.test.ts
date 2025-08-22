@@ -11,7 +11,7 @@ const TEST_CONTEXT: Context = {
   callbackWaitsForEmptyEventLoop: false,
   functionName: 'ai-assistant-dev-kb-sync-monitor',
   functionVersion: '$LATEST',
-  invokedFunctionArn: 'arn:aws:lambda:us-west-2:254539707041:function:ai-assistant-dev-kb-sync-monitor',
+  invokedFunctionArn: 'arn:aws:lambda:us-west-2:ACCOUNT_ID:function:ai-assistant-dev-kb-sync-monitor',
   memoryLimitInMB: '512',
   awsRequestId: 'test-request-id-' + Date.now(),
   logGroupName: '/aws/lambda/ai-assistant-dev-kb-sync-monitor',

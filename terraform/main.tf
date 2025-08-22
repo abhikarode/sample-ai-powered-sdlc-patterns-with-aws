@@ -589,7 +589,32 @@ module "chat_handler_lambda" {
   api_gateway_execution_arn     = module.api_gateway.api_gateway_execution_arn
   
   log_level           = "INFO"
-  enable_advanced_rag = "true"
+  enable_advanced_rag = "false"
+}
+
+# Admin Management Lambda Function
+module "admin_management_lambda" {
+  source = "./modules/lambda/admin-management/terraform"
+  
+  project_name    = var.project_name
+  environment     = var.environment
+  aws_region      = var.aws_region
+  
+  lambda_execution_role_arn = module.iam.lambda_admin_execution_role_arn
+  knowledge_base_id         = aws_bedrockagent_knowledge_base.main.id
+  data_source_id           = aws_bedrockagent_data_source.s3_source.data_source_id
+  documents_table_name      = module.dynamodb.table_name
+  
+  api_gateway_id                = module.api_gateway.api_gateway_id
+  api_gateway_root_resource_id  = module.api_gateway.root_resource_id
+  api_gateway_authorizer_id     = module.api_gateway.authorizer_id
+  api_gateway_execution_arn     = module.api_gateway.api_gateway_execution_arn
+  
+  log_level               = "INFO"
+  audit_log_group_name    = module.monitoring.admin_audit_log_group
+  metrics_log_group_name  = module.monitoring.knowledge_base_metrics_log_group
+  
+  tags = var.additional_tags
 }
 
 # CloudFront distribution for React frontend
@@ -609,4 +634,40 @@ module "cloudfront" {
   enable_ipv6    = true
   
   tags = var.additional_tags
+}
+
+# Monitoring Metrics Lambda Function
+module "monitoring_metrics_lambda" {
+  source = "./modules/lambda/monitoring-metrics"
+  
+  project_name    = var.project_name
+  environment     = var.environment
+  aws_region      = var.aws_region
+  
+  knowledge_base_id       = aws_bedrockagent_knowledge_base.main.id
+  metrics_log_group_name  = module.monitoring.knowledge_base_metrics_log_group
+  audit_log_group_name    = module.monitoring.admin_audit_log_group
+  log_retention_days      = 30
+}
+
+# CloudWatch Monitoring and Alerting
+module "monitoring" {
+  source = "./modules/monitoring"
+  
+  project_name = var.project_name
+  environment  = var.environment
+  aws_region   = var.aws_region
+  
+  # Alert configuration
+  alert_email_addresses = var.alert_email_addresses
+  log_retention_days    = 30
+  
+  # Resource references for monitoring
+  bedrock_model_id                = "anthropic.claude-opus-4-1-20250805-v1:0"
+  chat_lambda_function_name       = module.chat_handler_lambda.chat_handler_function_name
+  document_lambda_function_name   = module.document_management_lambda.lambda_function_name
+  admin_lambda_function_name      = module.admin_management_lambda.lambda_function_name
+  documents_table_name            = module.dynamodb.table_name
+  knowledge_base_id               = aws_bedrockagent_knowledge_base.main.id
+  s3_bucket_name                  = aws_s3_bucket.documents.bucket
 }

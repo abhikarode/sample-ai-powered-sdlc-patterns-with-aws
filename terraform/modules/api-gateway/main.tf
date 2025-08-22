@@ -42,12 +42,7 @@ resource "aws_api_gateway_resource" "documents" {
   path_part   = "documents"
 }
 
-# API Gateway Resource for /admin
-resource "aws_api_gateway_resource" "admin" {
-  rest_api_id = aws_api_gateway_rest_api.ai_assistant.id
-  parent_id   = aws_api_gateway_rest_api.ai_assistant.root_resource_id
-  path_part   = "admin"
-}
+# API Gateway Resource for /admin is created by the admin Lambda module
 
 # CORS Method for /chat
 resource "aws_api_gateway_method" "chat_options" {
@@ -107,6 +102,8 @@ resource "aws_api_gateway_method" "documents_options" {
   authorization = "NONE"
 }
 
+# Admin CORS is handled by the admin Lambda module
+
 resource "aws_api_gateway_integration" "documents_options" {
   rest_api_id = aws_api_gateway_rest_api.ai_assistant.id
   resource_id = aws_api_gateway_resource.documents.id
@@ -119,6 +116,8 @@ resource "aws_api_gateway_integration" "documents_options" {
     })
   }
 }
+
+
 
 resource "aws_api_gateway_method_response" "documents_options" {
   rest_api_id = aws_api_gateway_rest_api.ai_assistant.id
@@ -146,6 +145,8 @@ resource "aws_api_gateway_integration_response" "documents_options" {
   }
 }
 
+# Admin method responses are handled by the admin Lambda module
+
 # API Gateway Deployment
 resource "aws_api_gateway_deployment" "ai_assistant" {
   depends_on = [
@@ -161,7 +162,6 @@ resource "aws_api_gateway_deployment" "ai_assistant" {
     redeployment = sha1(jsonencode([
       aws_api_gateway_resource.chat.id,
       aws_api_gateway_resource.documents.id,
-      aws_api_gateway_resource.admin.id,
       aws_api_gateway_method.chat_options.id,
       aws_api_gateway_integration.chat_options.id,
       aws_api_gateway_method.documents_options.id,

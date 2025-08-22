@@ -138,6 +138,13 @@ resource "aws_iam_role_policy" "lambda_chat_bedrock_kb" {
           "bedrock:GetKnowledgeBase"
         ]
         Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "cloudwatch:PutMetricData"
+        ]
+        Resource = "*"
       }
     ]
   })
@@ -206,10 +213,29 @@ resource "aws_iam_role_policy" "lambda_admin_bedrock_kb" {
       {
         Effect = "Allow"
         Action = [
-          "bedrock-agent:*"
+          "bedrock-agent:GetKnowledgeBase",
+          "bedrock-agent:ListKnowledgeBases",
+          "bedrock-agent:GetDataSource",
+          "bedrock-agent:ListDataSources",
+          "bedrock-agent:ListIngestionJobs",
+          "bedrock-agent:GetIngestionJob",
+          "bedrock-agent:StartIngestionJob",
+          "bedrock-agent:StopIngestionJob",
+          "bedrock:GetKnowledgeBase",
+          "bedrock:ListKnowledgeBases",
+          "bedrock:GetDataSource",
+          "bedrock:ListDataSources",
+          "bedrock:ListIngestionJobs",
+          "bedrock:GetIngestionJob",
+          "bedrock:StartIngestionJob",
+          "bedrock:StopIngestionJob",
+          "bedrock:RetrieveAndGenerate",
+          "bedrock:Retrieve",
+          "bedrock:InvokeModel"
         ]
         Resource = [
-          "arn:aws:bedrock:${var.aws_region}:${data.aws_caller_identity.current.account_id}:knowledge-base/*"
+          "arn:aws:bedrock:${var.aws_region}:${data.aws_caller_identity.current.account_id}:knowledge-base/*",
+          "arn:aws:bedrock:${var.aws_region}::foundation-model/*"
         ]
       },
       {

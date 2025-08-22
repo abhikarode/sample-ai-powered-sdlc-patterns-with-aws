@@ -27,9 +27,21 @@ data "aws_region" "current" {}
 # Package the Lambda function code
 data "archive_file" "chat_handler" {
   type        = "zip"
-  source_dir  = "${path.module}/../dist"
   output_path = "${path.module}/../function.zip"
+  source_dir  = "${path.module}/../"
   depends_on  = [null_resource.build_lambda]
+  
+  excludes = [
+    "src",
+    "terraform",
+    "tsconfig.json",
+    "*.ts",
+    "node_modules/@types",
+    "node_modules/typescript",
+    "node_modules/.bin",
+    "*.md",
+    ".git*"
+  ]
 }
 
 # Build the Lambda function before packaging
@@ -37,10 +49,11 @@ resource "null_resource" "build_lambda" {
   triggers = {
     # Rebuild when source files change
     source_hash = filebase64sha256("${path.module}/../package.json")
+    src_hash    = sha256(join("", [for f in fileset("${path.module}/../src", "**/*.ts") : filesha256("${path.module}/../src/${f}")]))
   }
 
   provisioner "local-exec" {
-    command     = "npm run build"
+    command     = "npm ci && npm run build && npm ci --production"
     working_dir = "${path.module}/.."
   }
 }
@@ -107,6 +120,7 @@ resource "aws_iam_policy" "chat_handler_bedrock" {
           "bedrock:InvokeModelWithResponseStream"
         ]
         Resource = [
+          "arn:aws:bedrock:${data.aws_region.current.name}::foundation-model/anthropic.claude-sonnet-4-20250514-v1:0",
           "arn:aws:bedrock:${data.aws_region.current.name}::foundation-model/anthropic.claude-opus-4-1-20250805-v1:0",
           "arn:aws:bedrock:${data.aws_region.current.name}::foundation-model/anthropic.claude-3-7-sonnet-20250219-v1:0",
           "arn:aws:bedrock:${data.aws_region.current.name}::foundation-model/anthropic.claude-3-5-sonnet-20241022-v2:0"
@@ -141,14 +155,6 @@ resource "aws_iam_policy" "chat_handler_cloudwatch" {
           "cloudwatch:PutMetricData"
         ]
         Resource = "*"
-        Condition = {
-          StringEquals = {
-            "cloudwatch:namespace" = [
-              "AI-Assistant/Chat",
-              "AI-Assistant/AdvancedRAG"
-            ]
-          }
-        }
       }
     ]
   })
@@ -172,7 +178,7 @@ resource "aws_iam_role_policy_attachment" "chat_handler_cloudwatch" {
 
 # CloudWatch Log Group for Lambda
 resource "aws_cloudwatch_log_group" "chat_handler" {
-  name              = "/aws/lambda/ai-assistant-chat-handler"
+  name              = "/aws/lambda/ai-assistant-chat-endpoints"
   retention_in_days = 14
 
   tags = {
@@ -185,21 +191,23 @@ resource "aws_cloudwatch_log_group" "chat_handler" {
 # Lambda function
 resource "aws_lambda_function" "chat_handler" {
   filename         = data.archive_file.chat_handler.output_path
-  function_name    = "ai-assistant-chat-handler"
+  function_name    = "ai-assistant-chat-endpoints"
   role             = aws_iam_role.chat_handler_role.arn
-  handler          = "index.handler"
+  handler          = "chat-endpoints.handler"
   source_code_hash = data.archive_file.chat_handler.output_base64sha256
 
   runtime     = "nodejs20.x"
   memory_size = 1024
-  timeout     = 30
+  timeout     = 900  # 15 minutes - maximum allowed for Lambda
 
   environment {
     variables = {
       ENVIRONMENT         = var.environment
       KNOWLEDGE_BASE_ID   = var.knowledge_base_id
+      DOCUMENTS_TABLE     = var.documents_table_name
       LOG_LEVEL           = var.log_level
       ENABLE_ADVANCED_RAG = var.enable_advanced_rag
+      AWS_ACCOUNT_ID      = data.aws_caller_identity.current.account_id
     }
   }
 

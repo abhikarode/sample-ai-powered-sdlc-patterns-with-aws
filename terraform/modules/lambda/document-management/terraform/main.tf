@@ -338,7 +338,7 @@ resource "aws_api_gateway_integration_response" "documents_status_options" {
 
 # Lambda permission for API Gateway to invoke the function
 resource "aws_lambda_permission" "api_gateway_invoke_document_management" {
-  statement_id  = "AllowExecutionFromAPIGateway"
+  statement_id  = "AllowExecutionFromAPIGateway-${var.project_name}-document-management"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.document_management.function_name
   principal     = "apigateway.amazonaws.com"

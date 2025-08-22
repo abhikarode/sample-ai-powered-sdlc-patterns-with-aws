@@ -1,5 +1,5 @@
 // Header Component
-// Top navigation bar with user menu and branding
+// Top navigation bar with user menu, branding, and navigation links
 
 import { HeaderProps } from '@/types/components';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -14,7 +14,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-40 backdrop-blur-xl bg-slate-900/80 border-b border-white/10">
+    <header className="fixed top-0 left-0 right-0 z-10 backdrop-blur-xl bg-slate-900/80 border-b border-white/10 lg:left-64">
       <div className="px-6 py-4">
         <div className="flex items-center justify-between">
           {/* Logo and Brand */}
@@ -27,6 +27,8 @@ export const Header: React.FC<HeaderProps> = ({
               <p className="text-xs text-white/60">Development Team Knowledge Base</p>
             </div>
           </div>
+
+
 
           {/* User Menu */}
           {showUserMenu && user && (

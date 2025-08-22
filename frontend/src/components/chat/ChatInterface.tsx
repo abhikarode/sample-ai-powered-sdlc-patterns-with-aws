@@ -58,7 +58,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
       const response = await fetch(`${API_CONFIG.baseURL}/chat/history/${convId}`, {
         headers: {
-          'Authorization': `Bearer ${idToken}`,
+          'Authorization': idToken,
           'Content-Type': 'application/json'
         }
       });
@@ -110,7 +110,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       const response = await fetch(`${API_CONFIG.baseURL}/chat/ask`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${idToken}`,
+          'Authorization': idToken,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({

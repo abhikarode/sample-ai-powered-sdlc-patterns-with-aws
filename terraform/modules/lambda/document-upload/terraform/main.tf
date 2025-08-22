@@ -137,7 +137,7 @@ resource "aws_api_gateway_integration_response" "document_upload_200" {
 
 # Lambda permission for API Gateway
 resource "aws_lambda_permission" "api_gateway_invoke" {
-  statement_id  = "AllowExecutionFromAPIGateway"
+  statement_id  = "AllowExecutionFromAPIGateway-${var.project_name}-document-upload"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.document_upload.function_name
   principal     = "apigateway.amazonaws.com"

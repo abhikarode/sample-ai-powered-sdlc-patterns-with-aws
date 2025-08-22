@@ -15,6 +15,40 @@ This document captures critical findings, solutions, and lessons learned during 
 
 ## Critical Issues Resolved
 
+### 0. API Gateway Cognito Authorization Token Format
+
+**Problem**: Document management API returning 401 Unauthorized despite valid Cognito JWT tokens.
+
+**Symptoms**:
+- Frontend authentication working for chat API but failing for document API
+- API Gateway returning "Unauthorized" instead of "MissingAuthenticationTokenException"
+- Lambda function not being invoked despite valid user session
+
+**Root Cause**: API Gateway Cognito User Pool authorizer expects raw JWT token, NOT Bearer format.
+
+**Critical Solution**:
+```typescript
+// WRONG - Do not use Bearer prefix
+headers: {
+  'Authorization': `Bearer ${token}`
+}
+
+// CORRECT - Use raw JWT token
+headers: {
+  'Authorization': token
+}
+```
+
+**Key Learning**: API Gateway Cognito authorizer automatically handles JWT validation without requiring "Bearer" prefix. Adding "Bearer" causes authorization failure.
+
+**Terraform Configuration**: Ensure API Gateway methods use proper Cognito authorizer:
+```hcl
+resource "aws_api_gateway_method" "document_method" {
+  authorization = "COGNITO_USER_POOLS"
+  authorizer_id = var.cognito_authorizer_id
+}
+```
+
 ### 1. CORS Configuration Issues
 
 **Problem**: Frontend requests from CloudFront domain blocked by API Gateway CORS policy.
@@ -295,6 +329,11 @@ function extractDocumentTitle(uri: string): string {
 ### 5. Frontend Authentication Integration
 
 **Problem**: Cognito authentication not properly integrated with chat interface.
+
+**Critical Discovery**: API Gateway Cognito authorizer expects JWT token WITHOUT "Bearer" prefix.
+
+**Incorrect Format**: `Authorization: Bearer ${token}`
+**Correct Format**: `Authorization: ${token}`
 
 **Solution Applied**:
 ```typescript
@@ -637,6 +676,115 @@ try {
 5. **Poor Error Messages**: Always provide actionable error information
 6. **Skipping Integration Tests**: Test against real AWS services, not mocks
 7. **Inadequate Logging**: Log all important operations with sufficient context
+8. **Incorrect Cognito Token Format**: NEVER use "Bearer" prefix with API Gateway Cognito authorizer - use raw JWT token only
+
+## CORS Configuration Patterns (Tasks 12-13 Solutions)
+
+### Complete CORS Configuration for API Gateway Lambda Integration
+
+**Problem**: Admin API endpoints returning CORS errors despite having OPTIONS method configured.
+
+**Root Cause**: Incomplete CORS configuration missing proper method responses and integration responses.
+
+**Complete Working Solution** (from chat-handler implementation):
+
+```hcl
+# 1. OPTIONS Method (CORS Preflight) - MUST have authorization = "NONE"
+resource "aws_api_gateway_method" "admin_options" {
+  rest_api_id   = var.api_gateway_id
+  resource_id   = aws_api_gateway_resource.admin_proxy.id
+  http_method   = "OPTIONS"
+  authorization = "NONE"  # CRITICAL: No auth for preflight
+}
+
+# 2. OPTIONS Integration - MUST be MOCK type
+resource "aws_api_gateway_integration" "admin_options_integration" {
+  rest_api_id = var.api_gateway_id
+  resource_id = aws_api_gateway_resource.admin_proxy.id
+  http_method = aws_api_gateway_method.admin_options.http_method
+  type        = "MOCK"
+  
+  request_templates = {
+    "application/json" = jsonencode({
+      statusCode = 200
+    })
+  }
+}
+
+# 3. OPTIONS Method Response - MUST include all CORS headers as true
+resource "aws_api_gateway_method_response" "admin_options_response" {
+  rest_api_id = var.api_gateway_id
+  resource_id = aws_api_gateway_resource.admin_proxy.id
+  http_method = aws_api_gateway_method.admin_options.http_method
+  status_code = "200"
+  
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = true
+    "method.response.header.Access-Control-Allow-Methods" = true
+    "method.response.header.Access-Control-Allow-Origin"  = true
+  }
+}
+
+# 4. OPTIONS Integration Response - MUST include actual header values
+resource "aws_api_gateway_integration_response" "admin_options_integration_response" {
+  rest_api_id = var.api_gateway_id
+  resource_id = aws_api_gateway_resource.admin_proxy.id
+  http_method = aws_api_gateway_method.admin_options.http_method
+  status_code = "200"
+  
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    "method.response.header.Access-Control-Allow-Methods" = "'GET,POST,OPTIONS'"
+    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+}
+
+# 5. ALL other method responses MUST include CORS origin header
+resource "aws_api_gateway_method_response" "admin_get_response" {
+  rest_api_id = var.api_gateway_id
+  resource_id = aws_api_gateway_resource.admin_proxy.id
+  http_method = aws_api_gateway_method.admin_get.http_method
+  status_code = "200"
+  
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin" = true
+  }
+}
+
+# 6. ALL integration responses MUST include CORS origin value
+resource "aws_api_gateway_integration_response" "admin_get_integration_response" {
+  rest_api_id = var.api_gateway_id
+  resource_id = aws_api_gateway_resource.admin_proxy.id
+  http_method = aws_api_gateway_method.admin_get.http_method
+  status_code = "200"
+  
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin" = "'*'"
+  }
+}
+```
+
+**Critical Requirements for CORS to Work**:
+1. OPTIONS method MUST have `authorization = "NONE"`
+2. OPTIONS integration MUST be `type = "MOCK"`
+3. OPTIONS method response MUST declare all CORS headers as `true`
+4. OPTIONS integration response MUST provide actual header values in single quotes
+5. ALL other method responses MUST include `Access-Control-Allow-Origin = true`
+6. ALL other integration responses MUST include `Access-Control-Allow-Origin = "'*'"`
+
+**Testing CORS Configuration**:
+```bash
+# Test preflight request
+curl -X OPTIONS "https://api-url/admin/endpoint" \
+  -H "Origin: https://frontend-domain" \
+  -H "Access-Control-Request-Method: GET" \
+  -H "Access-Control-Request-Headers: Authorization,Content-Type" \
+  -v
+
+# Should return 200 with proper CORS headers
+```
+
+**Key Learning**: CORS requires BOTH method responses (declaring headers exist) AND integration responses (providing header values). Missing either will cause CORS failures.
 
 ## Success Metrics Achieved
 

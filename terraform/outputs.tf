@@ -130,6 +130,16 @@ output "api_gateway_execution_arn" {
   value       = module.api_gateway.api_gateway_execution_arn
 }
 
+output "api_gateway_authorizer_id" {
+  description = "ID of the API Gateway Cognito authorizer"
+  value       = module.api_gateway.authorizer_id
+}
+
+output "api_gateway_chat_resource_id" {
+  description = "ID of the API Gateway chat resource"
+  value       = module.api_gateway.chat_resource_id
+}
+
 # IAM outputs
 output "lambda_chat_execution_role_arn" {
   description = "ARN of the Lambda chat execution role"
@@ -175,6 +185,42 @@ output "frontend_bucket_name" {
 output "frontend_bucket_arn" {
   description = "S3 bucket ARN for frontend assets"
   value       = module.cloudfront.frontend_bucket_arn
+}
+
+# Monitoring outputs
+output "monitoring_dashboard_url" {
+  description = "URL of the CloudWatch dashboard"
+  value       = module.monitoring.dashboard_url
+}
+
+output "monitoring_sns_topic_arn" {
+  description = "ARN of the SNS topic for alerts"
+  value       = module.monitoring.sns_topic_arn
+}
+
+output "monitoring_alarm_arns" {
+  description = "ARNs of all CloudWatch alarms"
+  value       = module.monitoring.alarm_arns
+}
+
+output "monitoring_log_groups" {
+  description = "CloudWatch log groups for monitoring"
+  value = {
+    knowledge_base_metrics = module.monitoring.knowledge_base_metrics_log_group
+    admin_audit           = module.monitoring.admin_audit_log_group
+    monitoring_lambda     = module.monitoring_metrics_lambda.log_group_name
+  }
+}
+
+# DynamoDB outputs
+output "documents_table_name" {
+  description = "Name of the DynamoDB documents table"
+  value       = module.dynamodb.table_name
+}
+
+output "documents_table_arn" {
+  description = "ARN of the DynamoDB documents table"
+  value       = module.dynamodb.table_arn
 }
 
 # Complete application configuration for frontend

@@ -1,45 +1,56 @@
 import { ModelConfig, QueryComplexity } from './types';
 
-// Claude model hierarchy with inference profiles for better availability
+// Claude inference profiles for better availability and cross-region routing
 export const CLAUDE_INFERENCE_PROFILE_HIERARCHY = [
-  'us.anthropic.claude-opus-4-1-20250805-v1:0',      // Claude Opus 4.1 Cross-Region (Primary)
-  'us.anthropic.claude-3-7-sonnet-20250219-v1:0',   // Claude 3.7 Sonnet Cross-Region (Fallback)
-  'us.anthropic.claude-3-5-sonnet-20241022-v2:0'    // Claude 3.5 Sonnet v2 Cross-Region (Secondary)
+  'us.anthropic.claude-3-5-sonnet-20241022-v2:0',   // Claude 3.5 Sonnet v2 (Primary - proven to work)
+  'us.anthropic.claude-3-7-sonnet-20250219-v1:0',   // Claude 3.7 Sonnet (Fallback)
+  'us.anthropic.claude-sonnet-4-20250514-v1:0',     // Claude Sonnet 4 (Available via inference profile)
+  'us.anthropic.claude-opus-4-1-20250805-v1:0'      // Claude Opus 4.1 (Last resort)
 ];
 
-// Direct model fallback for specific use cases
+// Direct model fallback for specific use cases (if inference profiles fail)
 export const CLAUDE_DIRECT_MODEL_HIERARCHY = [
   'arn:aws:bedrock:us-west-2::foundation-model/anthropic.claude-3-5-sonnet-20241022-v2:0', // This one works with Knowledge Base
   'arn:aws:bedrock:us-west-2::foundation-model/anthropic.claude-3-7-sonnet-20250219-v1:0',
   'arn:aws:bedrock:us-west-2::foundation-model/anthropic.claude-opus-4-1-20250805-v1:0'
 ];
 
+// Note: These will be converted to full ARN format in the bedrock service
 export const MODEL_CONFIGS: ModelConfig[] = [
   {
-    modelArn: 'arn:aws:bedrock:us-west-2::foundation-model/anthropic.claude-opus-4-1-20250805-v1:0',
-    name: 'claude-opus-4-1',
-    costPerInputToken: 0.000015,  // $15/MTok
-    costPerOutputToken: 0.000075, // $75/MTok
-    latencyTier: 'moderate',
-    capabilities: ['multimodal', 'extended-thinking', 'complex-reasoning'],
-    maxContextLength: 200000
-  },
-  {
-    modelArn: 'arn:aws:bedrock:us-west-2::foundation-model/anthropic.claude-3-7-sonnet-20250219-v1:0',
-    name: 'claude-3-7-sonnet',
-    costPerInputToken: 0.000003,  // $3/MTok
-    costPerOutputToken: 0.000015, // $15/MTok
-    latencyTier: 'fast',
-    capabilities: ['extended-thinking', 'balanced-performance'],
-    maxContextLength: 200000
-  },
-  {
-    modelArn: 'arn:aws:bedrock:us-west-2::foundation-model/anthropic.claude-3-5-sonnet-20241022-v2:0',
+    modelArn: 'us.anthropic.claude-3-5-sonnet-20241022-v2:0', // Inference profile ID (converted to ARN at runtime)
     name: 'claude-3-5-sonnet-v2',
     costPerInputToken: 0.000003,  // $3/MTok
     costPerOutputToken: 0.000015, // $15/MTok
     latencyTier: 'fast',
-    capabilities: ['high-availability', 'multiple-context-lengths'],
+    capabilities: ['high-availability', 'multiple-context-lengths', 'cross-region'],
+    maxContextLength: 200000
+  },
+  {
+    modelArn: 'us.anthropic.claude-3-7-sonnet-20250219-v1:0', // Inference profile ID
+    name: 'claude-3-7-sonnet',
+    costPerInputToken: 0.000003,  // $3/MTok
+    costPerOutputToken: 0.000015, // $15/MTok
+    latencyTier: 'fast',
+    capabilities: ['extended-thinking', 'balanced-performance', 'cross-region'],
+    maxContextLength: 200000
+  },
+  {
+    modelArn: 'us.anthropic.claude-sonnet-4-20250514-v1:0', // Inference profile ID for Claude Sonnet 4
+    name: 'claude-sonnet-4',
+    costPerInputToken: 0.000003,  // Estimated $3/MTok (similar to other Sonnet models)
+    costPerOutputToken: 0.000015, // Estimated $15/MTok
+    latencyTier: 'fast',
+    capabilities: ['multimodal', 'high-availability', 'latest-generation', 'cross-region'],
+    maxContextLength: 200000
+  },
+  {
+    modelArn: 'us.anthropic.claude-opus-4-1-20250805-v1:0', // Inference profile ID for Claude Opus 4.1
+    name: 'claude-opus-4-1',
+    costPerInputToken: 0.000015,  // $15/MTok
+    costPerOutputToken: 0.000075, // $75/MTok
+    latencyTier: 'moderate',
+    capabilities: ['multimodal', 'extended-thinking', 'complex-reasoning', 'cross-region'],
     maxContextLength: 200000
   }
 ];
@@ -65,13 +76,32 @@ export function selectOptimalModel(
   requiresMultimodal: boolean = false
 ): ModelConfig {
   
-  // For complex queries or multimodal needs, prefer Opus 4.1
-  if (queryComplexity === QueryComplexity.COMPLEX || requiresMultimodal) {
-    return MODEL_CONFIGS[0]; // Claude Opus 4.1
+  // CRITICAL FIX: Use direct model IDs for on-demand invocation, not inference profile IDs
+  // All models must use direct model IDs that support ON_DEMAND throughput
+  
+  // For complex queries, use Claude 3.5 Sonnet v2 (best available with on-demand support)
+  if (queryComplexity === QueryComplexity.COMPLEX) {
+    return {
+      modelArn: 'anthropic.claude-3-5-sonnet-20241022-v2:0', // Direct model ID
+      name: 'claude-3-5-sonnet-v2',
+      costPerInputToken: 0.000003,
+      costPerOutputToken: 0.000015,
+      latencyTier: 'fast',
+      capabilities: ['high-availability', 'multiple-context-lengths'],
+      maxContextLength: 200000
+    };
   }
   
-  // For moderate and simple complexity, use 3.7 Sonnet (best balance)
-  return MODEL_CONFIGS[1]; // Claude 3.7 Sonnet
+  // For all other cases (simple, moderate), use Claude 3.5 Sonnet v2 (proven to work with Knowledge Base)
+  return {
+    modelArn: 'anthropic.claude-3-5-sonnet-20241022-v2:0', // Direct model ID
+    name: 'claude-3-5-sonnet-v2',
+    costPerInputToken: 0.000003,
+    costPerOutputToken: 0.000015,
+    latencyTier: 'fast',
+    capabilities: ['high-availability', 'multiple-context-lengths'],
+    maxContextLength: 200000
+  };
 }
 
 export function getModelConfigByName(modelName: string): ModelConfig | undefined {
