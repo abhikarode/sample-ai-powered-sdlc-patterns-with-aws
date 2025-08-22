@@ -11,12 +11,13 @@
     "package": "npm run clean && npm run build && zip -r function.zip dist/ node_modules/ package.json"
   },
   "dependencies": {
-    "aws-sdk": "^2.1691.0",
     "@aws-sdk/client-bedrock-agent": "^3.645.0",
+    "@aws-sdk/client-cloudwatch": "^3.645.0",
+    "@aws-sdk/client-cloudwatch-logs": "^3.645.0",
     "@aws-sdk/client-dynamodb": "^3.645.0",
     "@aws-sdk/lib-dynamodb": "^3.645.0",
-    "@aws-sdk/client-cloudwatch": "^3.645.0",
-    "@aws-sdk/client-cloudwatch-logs": "^3.645.0"
+    "aws-sdk": "^2.1691.0",
+    "zod": "^4.0.17"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.145",
@@ -29,8 +30,13 @@
   "jest": {
     "preset": "ts-jest",
     "testEnvironment": "node",
-    "roots": ["<rootDir>/src"],
-    "testMatch": ["**/__tests__/**/*.ts", "**/?(*.)+(spec|test).ts"],
+    "roots": [
+      "<rootDir>/src"
+    ],
+    "testMatch": [
+      "**/__tests__/**/*.ts",
+      "**/?(*.)+(spec|test).ts"
+    ],
     "collectCoverageFrom": [
       "src/**/*.ts",
       "!src/**/*.test.ts",

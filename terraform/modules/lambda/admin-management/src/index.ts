@@ -2,6 +2,7 @@
 // Handles Knowledge Base administration endpoints
 
 import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
+import { z } from 'zod';
 import {
     cancelIngestionJob,
     getKnowledgeBaseMetrics,
@@ -12,22 +13,73 @@ import {
     startDataSourceSync
 } from './admin-service';
 
-// CORS headers for API responses
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+// Enhanced validation schemas for admin operations
+const AdminRequestSchema = z.object({
+  body: z.string().nullable(),
+  headers: z.record(z.string()).optional(),
+  httpMethod: z.enum(['GET', 'POST', 'OPTIONS']),
+  path: z.string(),
+  pathParameters: z.record(z.string()).nullable(),
+  queryStringParameters: z.record(z.string()).nullable(),
+  requestContext: z.object({
+    requestId: z.string(),
+    authorizer: z.object({
+      claims: z.object({
+        'cognito:groups': z.string().optional(),
+        'cognito:username': z.string().optional(),
+        email: z.string().email().optional(),
+        sub: z.string().optional()
+      }).optional()
+    }).optional()
+  })
+});
+
+// Security headers for API responses
+const SECURITY_HEADERS = {
+  'Access-Control-Allow-Origin': process.env.ALLOWED_ORIGINS || 'https://diaxl2ky359mj.cloudfront.net',
   'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
-  'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
-  'Content-Type': 'application/json'
+  'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+  'Content-Type': 'application/json',
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'X-XSS-Protection': '1; mode=block',
+  'Strict-Transport-Security': 'max-age=31536000; includeSubDomains'
 };
 
 /**
- * Create standardized API response
+ * Create standardized API response with security headers
  */
 function createResponse(statusCode: number, body: any): APIGatewayProxyResult {
   return {
     statusCode,
-    headers: corsHeaders,
+    headers: SECURITY_HEADERS,
     body: JSON.stringify(body)
+  };
+}
+
+/**
+ * Create error response with proper logging
+ */
+function createErrorResponse(
+  statusCode: number,
+  message: string,
+  requestId: string,
+  code?: string
+): APIGatewayProxyResult {
+  // Log error without sensitive information
+  console.error(`Admin Error ${statusCode}:`, { message, code, requestId });
+  
+  return {
+    statusCode,
+    headers: SECURITY_HEADERS,
+    body: JSON.stringify({
+      error: {
+        code: code || 'INTERNAL_ERROR',
+        message,
+        requestId,
+        timestamp: new Date().toISOString()
+      }
+    })
   };
 }
 
@@ -48,12 +100,33 @@ function extractUserInfo(event: APIGatewayProxyEvent): { userId: string; userRol
 }
 
 /**
- * Validate admin permissions
+ * Validate admin permissions with enhanced security
  */
-function validateAdminAccess(userRole: string): void {
-  if (userRole !== 'admin') {
-    throw new Error('Admin access required');
+function validateAdminAccess(event: APIGatewayProxyEvent): { userId: string; userRole: string } {
+  const claims = event.requestContext?.authorizer?.claims;
+  
+  if (!claims) {
+    throw new Error('No authorization claims found');
   }
+  
+  // Check if user has admin role in Cognito groups
+  const groups = claims['cognito:groups'];
+  if (!groups || !groups.includes('admin')) {
+    throw new Error('Admin access required - insufficient permissions');
+  }
+  
+  const userId = claims['cognito:username'] || claims.sub || 'unknown';
+  const email = claims.email;
+  
+  // Additional validation
+  if (!userId || userId === 'unknown') {
+    throw new Error('Invalid user identification');
+  }
+  
+  return {
+    userId,
+    userRole: 'admin'
+  };
 }
 
 /**
@@ -65,33 +138,40 @@ export const handler = async (
 ): Promise<APIGatewayProxyResult> => {
   const requestId = context.awsRequestId;
   
+  // Log only non-sensitive request metadata
   console.log('Admin management request:', {
     requestId,
     method: event.httpMethod,
     path: event.path,
-    resource: event.resource
+    userAgent: event.headers?.['User-Agent']?.substring(0, 100) || 'unknown'
   });
   
   try {
+    // Validate request structure first
+    try {
+      AdminRequestSchema.parse(event);
+    } catch (error) {
+      return createErrorResponse(400, 'Invalid request structure', requestId, 'INVALID_REQUEST');
+    }
+
     // Handle CORS preflight requests
     if (event.httpMethod === 'OPTIONS') {
       return {
         statusCode: 200,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
-          'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-          'Content-Type': 'application/json'
-        },
+        headers: SECURITY_HEADERS,
         body: JSON.stringify({ message: 'CORS preflight successful' })
       };
     }
+
+    // Validate HTTP method
+    if (!['GET', 'POST'].includes(event.httpMethod)) {
+      return createErrorResponse(405, 'Method not allowed', requestId, 'METHOD_NOT_ALLOWED');
+    }
     
-    // Extract and validate user information
-    const { userId, userRole } = extractUserInfo(event);
-    validateAdminAccess(userRole);
+    // Extract and validate user information with enhanced security
+    const { userId, userRole } = validateAdminAccess(event);
     
-    console.log('Admin request authorized:', { requestId, userId, userRole });
+    console.log('Admin request authorized:', { requestId, userId });
     
     // Extract additional request information for audit logging
     const sourceIp = event.requestContext?.identity?.sourceIp;
@@ -115,31 +195,28 @@ export const handler = async (
     }
     
   } catch (error: any) {
+    // Log error details server-side only (no sensitive info)
     console.error('Admin management error:', {
       requestId,
-      error: error.message,
-      stack: error.stack
+      errorType: error.constructor.name,
+      message: error.message,
+      timestamp: new Date().toISOString()
     });
     
-    if (error.message === 'Admin access required') {
-      return createResponse(403, {
-        error: 'Forbidden',
-        message: 'Admin access required for this operation'
-      });
+    if (error.message.includes('Admin access required') || error.message.includes('insufficient permissions')) {
+      return createErrorResponse(403, 'Admin access required for this operation', requestId, 'FORBIDDEN');
     }
     
-    if (error.message === 'No authorization claims found') {
-      return createResponse(401, {
-        error: 'Unauthorized',
-        message: 'Valid authentication required'
-      });
+    if (error.message === 'No authorization claims found' || error.message === 'Invalid user identification') {
+      return createErrorResponse(401, 'Valid authentication required', requestId, 'UNAUTHORIZED');
     }
     
-    return createResponse(500, {
-      error: 'Internal Server Error',
-      message: 'An error occurred processing the admin request',
-      requestId
-    });
+    if (error.message === 'Invalid request structure') {
+      return createErrorResponse(400, 'Invalid request format', requestId, 'BAD_REQUEST');
+    }
+    
+    // Generic error for unexpected issues
+    return createErrorResponse(500, 'An error occurred processing the admin request', requestId, 'INTERNAL_ERROR');
   }
 };
 

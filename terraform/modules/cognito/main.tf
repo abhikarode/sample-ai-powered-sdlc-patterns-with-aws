@@ -14,13 +14,14 @@ resource "aws_cognito_user_pool" "ai_assistant" {
   # Auto-verify email addresses
   auto_verified_attributes = ["email"]
 
-  # Password policy
+  # Enhanced password policy for security
   password_policy {
-    minimum_length    = 8
-    require_lowercase = true
-    require_numbers   = true
-    require_symbols   = true
-    require_uppercase = true
+    minimum_length                   = 12
+    require_lowercase               = true
+    require_numbers                 = true
+    require_symbols                 = true
+    require_uppercase               = true
+    temporary_password_validity_days = 7
   }
 
   # Email configuration
@@ -52,6 +53,21 @@ resource "aws_cognito_user_pool" "ai_assistant" {
   # User pool add-ons for advanced security
   user_pool_add_ons {
     advanced_security_mode = "ENFORCED"
+  }
+
+  # Account lockout policy
+  admin_create_user_config {
+    allow_admin_create_user_only = false
+    
+    invite_message_action = "EMAIL"
+    
+    temporary_password_validity_days = 7
+  }
+
+  # Device configuration for enhanced security
+  device_configuration {
+    challenge_required_on_new_device      = true
+    device_only_remembered_on_user_prompt = true
   }
 
   tags = var.tags

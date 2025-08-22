@@ -486,6 +486,9 @@ module "api_gateway" {
   aws_region           = var.aws_region
   cognito_user_pool_arn = module.cognito.user_pool_arn
   stage_name           = var.environment
+  allowed_origins      = var.allowed_origins
+  rate_limit          = var.api_rate_limit
+  burst_limit         = var.api_burst_limit
   
   tags = var.additional_tags
 }

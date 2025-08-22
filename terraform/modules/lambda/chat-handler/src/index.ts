@@ -1,28 +1,83 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
 import { BedrockService } from './bedrock-service';
 import { BedrockError, ChatRequest } from './types';
-import { createValidationErrorResponse, validateChatRequest } from './validation';
+import { validateChatRequest } from './validation';
 
 const bedrockService = new BedrockService();
+
+// Security headers for all responses
+const SECURITY_HEADERS = {
+  'Access-Control-Allow-Origin': process.env.ALLOWED_ORIGINS || 'https://diaxl2ky359mj.cloudfront.net',
+  'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+  'Access-Control-Allow-Methods': 'POST,OPTIONS',
+  'Content-Type': 'application/json',
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'X-XSS-Protection': '1; mode=block',
+  'Strict-Transport-Security': 'max-age=31536000; includeSubDomains'
+};
+
+// Enhanced error response function
+function createErrorResponse(
+  statusCode: number,
+  message: string,
+  requestId: string,
+  code?: string
+): APIGatewayProxyResult {
+  // Log error without sensitive information
+  console.error(`Error ${statusCode}:`, { message, code, requestId });
+  
+  return {
+    statusCode,
+    headers: SECURITY_HEADERS,
+    body: JSON.stringify({
+      error: {
+        code: code || 'INTERNAL_ERROR',
+        message,
+        requestId,
+        timestamp: new Date().toISOString()
+      }
+    })
+  };
+}
 
 export const handler = async (
   event: APIGatewayProxyEvent,
   context: Context
 ): Promise<APIGatewayProxyResult> => {
-  console.log('Chat handler invoked:', JSON.stringify(event, null, 2));
+  // Log only non-sensitive request metadata
+  console.log('Chat handler invoked:', {
+    httpMethod: event.httpMethod,
+    path: event.path,
+    requestId: context.awsRequestId,
+    userAgent: event.headers?.['User-Agent']?.substring(0, 100) || 'unknown'
+  });
   
   try {
     // Handle CORS preflight
     if (event.httpMethod === 'OPTIONS') {
       return {
         statusCode: 200,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
-          'Access-Control-Allow-Methods': 'POST,OPTIONS'
-        },
+        headers: SECURITY_HEADERS,
         body: ''
       };
+    }
+
+    // Validate HTTP method
+    if (event.httpMethod !== 'POST') {
+      return createErrorResponse(405, 'Method not allowed', context.awsRequestId, 'METHOD_NOT_ALLOWED');
+    }
+
+    // Validate API Gateway event structure
+    try {
+      APIGatewayEventSchema.parse(event);
+    } catch (error) {
+      return createErrorResponse(400, 'Invalid request structure', context.awsRequestId, 'INVALID_REQUEST');
+    }
+
+    // Validate request size
+    if (event.body && event.body.length > 10000) {
+      return createErrorResponse(413, 'Request body too large', context.awsRequestId, 'PAYLOAD_TOO_LARGE');
     }
     
     // Parse request body
@@ -30,33 +85,20 @@ export const handler = async (
     try {
       requestBody = JSON.parse(event.body || '{}');
     } catch (error) {
-      return {
-        statusCode: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
-        },
-        body: JSON.stringify({
-          error: {
-            code: 'INVALID_JSON',
-            message: 'Invalid JSON in request body'
-          }
-        })
-      };
+      return createErrorResponse(400, 'Invalid JSON in request body', context.awsRequestId, 'INVALID_JSON');
     }
     
-    // Validate request
-    const validationErrors = validateChatRequest(requestBody);
-    if (validationErrors.length > 0) {
-      return createValidationErrorResponse(validationErrors);
+    // Validate and sanitize request
+    let chatRequest: ChatRequest;
+    try {
+      chatRequest = validateChatRequest(requestBody);
+      // Additional sanitization
+      chatRequest.question = sanitizeInput(chatRequest.question);
+    } catch (error) {
+      return createErrorResponse(400, error instanceof Error ? error.message : 'Validation failed', context.awsRequestId, 'VALIDATION_ERROR');
     }
     
-    const chatRequest: ChatRequest = {
-      question: requestBody.question,
-      userId: requestBody.userId || 'test-user',
-      conversationId: requestBody.conversationId,
-      queryComplexity: requestBody.queryComplexity
-    };
+    // chatRequest is already validated and sanitized above
     
     // Validate environment variables
     if (!process.env.KNOWLEDGE_BASE_ID) {
@@ -85,35 +127,28 @@ export const handler = async (
     
     return {
       statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
-        'Access-Control-Allow-Methods': 'POST,OPTIONS'
-      },
+      headers: SECURITY_HEADERS,
       body: JSON.stringify(response)
     };
     
   } catch (error) {
-    console.error('Error in chat handler:', error);
-    
     const bedrockError = error as BedrockError;
     const statusCode = bedrockError.statusCode || 500;
     
-    return {
+    // Log error details server-side only (no sensitive info)
+    console.error('Chat handler error:', {
+      code: bedrockError.code,
       statusCode,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
-      },
-      body: JSON.stringify({
-        error: {
-          code: bedrockError.code || 'INTERNAL_ERROR',
-          message: bedrockError.message || 'An unexpected error occurred',
-          requestId: context.awsRequestId,
-          timestamp: new Date().toISOString()
-        }
-      })
-    };
+      requestId: context.awsRequestId,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Return generic error message to client
+    return createErrorResponse(
+      statusCode,
+      bedrockError.message || 'An unexpected error occurred while processing your request',
+      context.awsRequestId,
+      bedrockError.code
+    );
   }
 };

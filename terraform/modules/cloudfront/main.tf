@@ -207,7 +207,8 @@ resource "aws_cloudfront_response_headers_policy" "security_headers" {
     strict_transport_security {
       access_control_max_age_sec = 31536000
       include_subdomains         = true
-      override                   = true
+      preload                   = true
+      override                  = true
     }
     
     content_type_options {
@@ -225,7 +226,27 @@ resource "aws_cloudfront_response_headers_policy" "security_headers" {
     }
   }
 
+  # Content Security Policy
   custom_headers_config {
+    items {
+      header   = "Content-Security-Policy"
+      value    = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://*.amazonaws.com https://*.cloudfront.net; font-src 'self'; object-src 'none'; media-src 'self'; frame-src 'none'"
+      override = true
+    }
+    
+    items {
+      header   = "X-XSS-Protection"
+      value    = "1; mode=block"
+      override = true
+    }
+    
+    items {
+      header   = "Permissions-Policy"
+      value    = "geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), gyroscope=(), speaker=()"
+      override = true
+    }
+
+    
     items {
       header   = "X-Frontend-Version"
       value    = "1.0.0"
@@ -242,13 +263,13 @@ resource "aws_cloudfront_response_headers_policy" "security_headers" {
   cors_config {
     access_control_allow_credentials = false
     access_control_allow_headers {
-      items = ["*"]
+      items = ["Content-Type", "Authorization", "X-Amz-Date", "X-Api-Key", "X-Amz-Security-Token"]
     }
     access_control_allow_methods {
-      items = ["GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS"]
+      items = ["GET", "POST", "OPTIONS"]
     }
     access_control_allow_origins {
-      items = ["*"]
+      items = ["https://diaxl2ky359mj.cloudfront.net"]
     }
     access_control_max_age_sec = 86400
     origin_override           = true
