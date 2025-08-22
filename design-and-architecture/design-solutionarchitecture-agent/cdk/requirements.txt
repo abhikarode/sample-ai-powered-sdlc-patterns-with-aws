@@ -1,5 +1,0 @@
-aws-cdk-lib
-constructs
-boto3
-cdk-ecr-deployment
-cdk-nag
