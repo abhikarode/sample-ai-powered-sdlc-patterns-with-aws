@@ -78,12 +78,27 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   };
 
   const handleSendMessage = async (messageText: string) => {
-    if (!messageText.trim()) return;
+    // Enhanced input validation and sanitization
+    const validation = validateMessage(messageText);
+    if (!validation.isValid) {
+      setError(validation.error || 'Invalid message');
+      return;
+    }
 
+    // Rate limiting check
+    const userId = authState.user?.sub || 'anonymous';
+    if (!chatRateLimiter.isAllowed(userId)) {
+      setError('Too many messages. Please wait a moment before sending another message.');
+      return;
+    }
+
+    // Sanitize input
+    const sanitizedMessage = sanitizeInput(messageText);
+    
     const userMessage: ChatMessage = {
       messageId: `user-${Date.now()}`,
       type: 'user',
-      content: messageText,
+      content: sanitizedMessage,
       timestamp: new Date().toISOString()
     };
 
@@ -93,18 +108,10 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     setError(null);
 
     try {
-      // Get ID token from authState or fallback to localStorage (API Gateway requires ID token, not access token)
-      let idToken = authState.idToken;
+      // Securely get authentication token
+      const idToken = getSecureAuthToken(authState);
       if (!idToken) {
-        // Look for Cognito ID token in localStorage
-        const tokenKey = Object.keys(localStorage).find(key => 
-          key.includes('CognitoIdentityServiceProvider') && key.includes('idToken')
-        );
-        idToken = tokenKey ? localStorage.getItem(tokenKey) || undefined : undefined;
-      }
-
-      if (!idToken) {
-        throw new Error('No ID token available');
+        throw new Error('Authentication required - please log in again');
       }
 
       const response = await fetch(`${API_CONFIG.baseURL}/chat/ask`, {
@@ -114,7 +121,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          question: messageText,
+          question: sanitizedMessage,
           userId: authState.user?.sub || 'anonymous',
           conversationId: conversationId,
           includeSourceDetails: true
@@ -138,36 +145,17 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
       setMessages(prev => [...prev, assistantMessage]);
     } catch (err) {
-      console.error('Error sending message:', err);
+      // Secure error handling - don't expose sensitive information
+      console.error('Chat error occurred:', { timestamp: new Date().toISOString() });
       
-      // Handle specific error types
-      let errorMessage = 'I apologize, but I encountered an error processing your request. Please try again.';
-      let shouldRetry = true;
+      const secureErrorMessage = createSecureErrorMessage(err);
+      setError(secureErrorMessage);
       
-      if (err instanceof Error) {
-        const errorResponse = err.message;
-        if (errorResponse.includes('KNOWLEDGE_BASE_NOT_FOUND')) {
-          errorMessage = 'The knowledge base is not available. Please contact an administrator.';
-          shouldRetry = false;
-        } else if (errorResponse.includes('RATE_LIMIT_EXCEEDED')) {
-          errorMessage = 'Too many requests. Please wait a moment and try again.';
-          shouldRetry = true;
-        } else if (errorResponse.includes('AUTHORIZATION_FAILED')) {
-          errorMessage = 'You do not have permission to access this service. Please contact an administrator.';
-          shouldRetry = false;
-        } else if (errorResponse.includes('KNOWLEDGE_BASE_BUSY')) {
-          errorMessage = 'The knowledge base is currently processing documents. Please try again in a few minutes.';
-          shouldRetry = true;
-        }
-      }
-      
-      setError(shouldRetry ? 'Failed to get AI response. Please try again.' : errorMessage);
-      
-      // Add error message
+      // Add error message to chat
       const assistantErrorMessage: ChatMessage = {
         messageId: `error-${Date.now()}`,
         type: 'assistant',
-        content: errorMessage,
+        content: secureErrorMessage,
         timestamp: new Date().toISOString()
       };
       

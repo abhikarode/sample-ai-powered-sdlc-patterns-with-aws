@@ -119,6 +119,40 @@ variable "alert_email_addresses" {
   default     = []
 }
 
+# Security Configuration
+variable "allowed_origins" {
+  description = "Allowed origins for CORS (must use HTTPS)"
+  type        = string
+  default     = "https://diaxl2ky359mj.cloudfront.net"
+  
+  validation {
+    condition     = can(regex("^https://", var.allowed_origins))
+    error_message = "Allowed origins must use HTTPS protocol for security."
+  }
+}
+
+variable "api_rate_limit" {
+  description = "API Gateway rate limit (requests per second)"
+  type        = number
+  default     = 100
+  
+  validation {
+    condition     = var.api_rate_limit > 0 && var.api_rate_limit <= 10000
+    error_message = "API rate limit must be between 1 and 10000 requests per second."
+  }
+}
+
+variable "api_burst_limit" {
+  description = "API Gateway burst limit (concurrent requests)"
+  type        = number
+  default     = 200
+  
+  validation {
+    condition     = var.api_burst_limit > 0 && var.api_burst_limit <= 5000
+    error_message = "API burst limit must be between 1 and 5000 concurrent requests."
+  }
+}
+
 # Tags
 variable "additional_tags" {
   description = "Additional tags to apply to all resources"

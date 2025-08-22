@@ -89,8 +89,9 @@ resource "aws_api_gateway_integration_response" "chat_options" {
 
   response_parameters = {
     "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-    "method.response.header.Access-Control-Allow-Methods" = "'GET,OPTIONS,POST,PUT,DELETE'"
-    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+    "method.response.header.Access-Control-Allow-Methods" = "'POST,OPTIONS'"
+    "method.response.header.Access-Control-Allow-Origin"  = "'${var.allowed_origins}'"
+    "method.response.header.Access-Control-Max-Age"       = "'86400'"
   }
 }
 
@@ -140,8 +141,9 @@ resource "aws_api_gateway_integration_response" "documents_options" {
 
   response_parameters = {
     "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-    "method.response.header.Access-Control-Allow-Methods" = "'GET,OPTIONS,POST,PUT,DELETE'"
-    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+    "method.response.header.Access-Control-Allow-Methods" = "'GET,POST,OPTIONS'"
+    "method.response.header.Access-Control-Allow-Origin"  = "'${var.allowed_origins}'"
+    "method.response.header.Access-Control-Max-Age"       = "'86400'"
   }
 }
 
@@ -200,7 +202,21 @@ resource "aws_api_gateway_stage" "ai_assistant" {
   # Enable X-Ray tracing
   xray_tracing_enabled = true
 
+  # Throttling settings for rate limiting
+  throttle_settings {
+    rate_limit  = var.rate_limit
+    burst_limit = var.burst_limit
+  }
+
   tags = var.tags
+}
+
+# Request Validator for input validation
+resource "aws_api_gateway_request_validator" "ai_assistant" {
+  name                        = "${var.project_name}-request-validator"
+  rest_api_id                = aws_api_gateway_rest_api.ai_assistant.id
+  validate_request_body       = true
+  validate_request_parameters = true
 }
 
 # CloudWatch Log Group for API Gateway
