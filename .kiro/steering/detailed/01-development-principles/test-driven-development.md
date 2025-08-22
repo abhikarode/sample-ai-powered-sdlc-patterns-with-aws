@@ -1,5 +1,5 @@
 ---
-inclusion: always
+inclusion: manual
 ---
 
 # Test-Driven Development (TDD) - Fundamental Tenet
