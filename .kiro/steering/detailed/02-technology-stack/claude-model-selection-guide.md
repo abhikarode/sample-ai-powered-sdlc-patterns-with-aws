@@ -1,5 +1,5 @@
 ---
-inclusion: always
+inclusion: manual
 ---
 
 # Claude Model Selection Guide - AWS Bedrock Nuances
