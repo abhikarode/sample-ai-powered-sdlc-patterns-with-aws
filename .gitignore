@@ -16,6 +16,7 @@ dist
 *.tfvars
 .terraform/
 .terraform.lock.hcl
+**/.terraform/providers/
 
 # Environment files
 .env
