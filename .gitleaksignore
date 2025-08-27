@@ -1,0 +1,6 @@
+# GitLeaks ignore file
+# This file contains fingerprints of false positives that should be ignored by GitLeaks scanner
+
+# AWS Config placeholders - not actual secrets
+# These are configuration placeholders that will be replaced during deployment
+226e32bce8be0a4eafb12054bc0ddbd744385ddc:frontend/src/config/aws-config.ts:generic-api-key:10
