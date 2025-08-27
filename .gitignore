@@ -25,9 +25,16 @@ dist
 .env.test.local
 .env.production.local
 
-# AWS credentials
+# AWS credentials and secrets
 .aws/
 aws-credentials.json
+**/secrets.json
+**/credentials.json
+
+# Test scripts with tokens/secrets
+test-api.sh
+**/test-*.sh
+**/*-test.sh
 
 # Build artifacts
 build/
