@@ -1,0 +1,68 @@
+# Variables for Document Management Lambda Function Terraform Module
+
+variable "project_name" {
+  description = "Name of the project"
+  type        = string
+}
+
+variable "environment" {
+  description = "Environment name (dev, staging, prod)"
+  type        = string
+}
+
+variable "aws_region" {
+  description = "AWS region for deployment"
+  type        = string
+  default     = "us-west-2"
+}
+
+variable "lambda_execution_role_arn" {
+  description = "ARN of the Lambda execution role"
+  type        = string
+}
+
+variable "documents_bucket_name" {
+  description = "Name of the S3 bucket for documents"
+  type        = string
+}
+
+variable "documents_table_name" {
+  description = "Name of the DynamoDB table for document metadata"
+  type        = string
+}
+
+variable "knowledge_base_id" {
+  description = "ID of the Bedrock Knowledge Base"
+  type        = string
+}
+
+variable "data_source_id" {
+  description = "ID of the Bedrock Knowledge Base data source"
+  type        = string
+}
+
+variable "api_gateway_id" {
+  description = "ID of the API Gateway REST API"
+  type        = string
+}
+
+variable "api_gateway_documents_resource_id" {
+  description = "ID of the API Gateway /documents resource"
+  type        = string
+}
+
+variable "api_gateway_authorizer_id" {
+  description = "ID of the API Gateway Cognito authorizer"
+  type        = string
+}
+
+variable "api_gateway_execution_arn" {
+  description = "Execution ARN of the API Gateway"
+  type        = string
+}
+
+variable "tags" {
+  description = "Tags to apply to resources"
+  type        = map(string)
+  default     = {}
+}

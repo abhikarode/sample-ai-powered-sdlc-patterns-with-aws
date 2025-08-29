@@ -1,0 +1,55 @@
+# GitLeaks configuration for AI Assistant project
+# This file defines rules for secret detection and exclusions
+
+title = "AI Assistant GitLeaks Configuration"
+
+# Global settings
+[extend]
+# Use default GitLeaks rules as base
+useDefault = true
+
+# Allowlist for specific commits that contain revoked/safe secrets
+[[allowlist]]
+description = "Revoked JWT token in historical commit - token was revoked via AWS Cognito"
+commit = "980bb50fcd7d0015dcad68b7f9a0a741cd64962e"
+path = "test-api.sh"
+regexTarget = "match"
+
+[[allowlist]]
+description = "Configuration placeholders - not real secrets"
+path = '''.*config.*\.(ts|js|json)'''
+regexTarget = "match"
+regex = '''(PLACEHOLDER_|us-west-2_tsucnmtVS|9v2eolu2f67choj7s93sgu386)'''
+
+# Ignore test files with mock data
+[[allowlist]]
+description = "Test files with mock/example data"
+path = '''.*test.*\.(sh|ts|js)'''
+regexTarget = "match"
+
+# Ignore documentation and example files
+[[allowlist]]
+description = "Documentation and example files"
+path = '''(README|EXAMPLE|TEMPLATE|\.md|\.txt)'''
+regexTarget = "match"
+
+# Custom rules for this project
+[[rules]]
+description = "Detect actual AWS access keys (not placeholders)"
+id = "aws-access-key-real"
+regex = '''AKIA[0-9A-Z]{16}'''
+secretGroup = 1
+
+[[rules]]
+description = "Detect actual AWS secret keys (not placeholders)"
+id = "aws-secret-key-real"
+regex = '''[A-Za-z0-9/+=]{40}'''
+secretGroup = 1
+# Only flag if it's not a placeholder pattern
+entropy = 4.5
+
+# Paths to ignore completely
+[[allowlist]]
+description = "Ignore common directories and files"
+path = '''(\.git/|node_modules/|.*\.log|.*\.tmp|\.terraform/|.*\.tfstate.*|\.security-scan-trigger)'''
+regexTarget = "match"
