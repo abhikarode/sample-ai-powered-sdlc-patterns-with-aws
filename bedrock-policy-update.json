@@ -1,0 +1,28 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "bedrock:InvokeModel",
+        "bedrock:InvokeModelWithResponseStream"
+      ],
+      "Resource": [
+        "arn:aws:bedrock:us-west-2::foundation-model/anthropic.claude-3-5-haiku-20241022-v1:0",
+        "arn:aws:bedrock:us-west-2::foundation-model/anthropic.claude-3-5-sonnet-20241022-v2:0",
+        "arn:aws:bedrock:us-west-2::foundation-model/anthropic.claude-3-5-sonnet-20240620-v1:0",
+        "arn:aws:bedrock:us-west-2::foundation-model/anthropic.claude-3-7-sonnet-20250219-v1:0"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "bedrock:RetrieveAndGenerate",
+        "bedrock:Retrieve"
+      ],
+      "Resource": [
+        "arn:aws:bedrock:us-west-2:254539707041:knowledge-base/*"
+      ]
+    }
+  ]
+}

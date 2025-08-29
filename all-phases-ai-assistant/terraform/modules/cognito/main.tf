@@ -59,9 +59,11 @@ resource "aws_cognito_user_pool" "ai_assistant" {
   admin_create_user_config {
     allow_admin_create_user_only = false
     
-    invite_message_action = "EMAIL"
-    
-    temporary_password_validity_days = 7
+    invite_message_template {
+      email_message = "Your username is {username} and temporary password is {####}. Please sign in and change your password."
+      email_subject = "Your temporary password"
+      sms_message   = "Your username is {username} and temporary password is {####}"
+    }
   }
 
   # Device configuration for enhanced security

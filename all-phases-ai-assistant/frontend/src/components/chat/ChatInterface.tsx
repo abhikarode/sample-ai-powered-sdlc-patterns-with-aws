@@ -5,6 +5,7 @@ import { API_CONFIG } from '@/config/aws-config';
 import { useAuth } from '@/contexts/AuthContext';
 import { ChatMessage, DocumentSource } from '@/types/api';
 import { ChatInterfaceProps } from '@/types/components';
+import { chatRateLimiter, createSecureErrorMessage, getSecureAuthToken, sanitizeInput, validateMessage } from '@/utils/security';
 import { motion } from 'framer-motion';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ChatInput } from './ChatInput';
@@ -114,7 +115,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         throw new Error('Authentication required - please log in again');
       }
 
-      const response = await fetch(`${API_CONFIG.baseURL}/chat/ask`, {
+      const response = await fetch(`${API_CONFIG.baseURL}/chat/stream`, {
         method: 'POST',
         headers: {
           'Authorization': idToken,
@@ -124,7 +125,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
           question: sanitizedMessage,
           userId: authState.user?.sub || 'anonymous',
           conversationId: conversationId,
-          includeSourceDetails: true
+          includeSourceDetails: true,
+          enableStreaming: true
         })
       });
 

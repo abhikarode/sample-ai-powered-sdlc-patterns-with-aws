@@ -18,13 +18,13 @@ import {
 } from './model-config';
 import {
     BedrockError,
-    ChatRequest,
     ChatResponse,
     DocumentSource,
     RAGConfiguration,
     ResponseQuality,
     TokenUsage
 } from './types';
+import { ChatRequest } from './validation';
 
 export class BedrockService {
   private bedrockAgentRuntime: BedrockAgentRuntimeClient;
@@ -209,39 +209,163 @@ export class BedrockService {
   private async getAvailableClaudeModel(): Promise<string> {
     const environment = process.env.ENVIRONMENT || 'development';
     
-    // CRITICAL FIX: Use direct model IDs for on-demand invocation, not inference profile ARNs
-    // Claude Sonnet 4 only supports INFERENCE_PROFILE invocation type and no profile exists yet
-    // 
-    // Fallback hierarchy per steering rules:
-    // 1. Claude Sonnet 4 (not available - requires inference profile that doesn't exist)
-    // 2. Claude 3.7 Sonnet (not available in us-west-2)
-    // 3. Claude 3.5 Sonnet v2 (available with ON_DEMAND support)
-
-    const claude35SonnetV2ModelId = 'anthropic.claude-3-5-sonnet-20241022-v2:0';
-
-    console.log(`Using Claude 3.5 Sonnet v2 model ID (best available): ${claude35SonnetV2ModelId}`);
-    console.log('Note: Claude Sonnet 4 requires inference profile but none is available in us-west-2 yet');
-    return claude35SonnetV2ModelId;
-  }
-
-  private async testModelAvailability(modelId: string): Promise<void> {
-    const testCommand = new InvokeModelCommand({
-      modelId,
-      body: JSON.stringify({
-        anthropic_version: "bedrock-2023-05-31",
-        max_tokens: 1,
-        messages: [{ role: 'user', content: 'test' }]
-      })
-    });
+    // TASK 1: Use Claude 3.5 Haiku as primary model with fallback chain
+    // Primary: Claude 3.5 Haiku (reliable, cost-effective, proven compatibility)
+    // Secondary: Claude 3.5 Sonnet v2 (high quality, may have compatibility issues)
     
-    await this.executeWithRetry(() => this.bedrockRuntime.send(testCommand));
+    const modelFallbackChain = [
+      {
+        modelId: 'anthropic.claude-3-5-haiku-20241022-v1:0',
+        modelArn: 'arn:aws:bedrock:us-west-2::foundation-model/anthropic.claude-3-5-haiku-20241022-v1:0',
+        name: 'Claude 3.5 Haiku',
+        priority: 1
+      },
+      {
+        modelId: 'anthropic.claude-3-5-sonnet-20241022-v2:0',
+        modelArn: 'arn:aws:bedrock:us-west-2::foundation-model/anthropic.claude-3-5-sonnet-20241022-v2:0',
+        name: 'Claude 3.5 Sonnet v2',
+        priority: 2
+      }
+    ];
+
+    // Try each model in priority order with availability validation
+    for (const model of modelFallbackChain) {
+      try {
+        console.log(`Validating model availability: ${model.name} (${model.modelId})`);
+        
+        // Validate model availability before use
+        const isAvailable = await this.validateModelAvailability(model.modelId);
+        
+        if (isAvailable) {
+          console.log(`✓ Selected model: ${model.name} (${model.modelId})`);
+          console.log(`Model selection reason: Priority ${model.priority} - ${model.name} is available and compatible`);
+          
+          // Log model selection decision for monitoring
+          await this.logModelSelection(model.modelId, model.name, 'AVAILABLE', []);
+          
+          return model.modelId;
+        } else {
+          console.log(`✗ Model unavailable: ${model.name} (${model.modelId})`);
+        }
+        
+      } catch (error) {
+        console.log(`✗ Model validation failed: ${model.name} - ${error}`);
+        // Continue to next model in fallback chain
+      }
+    }
+    
+    // If all models fail validation, fall back to Claude 3.5 Haiku (most reliable)
+    const fallbackModel = modelFallbackChain[0];
+    console.log(`⚠️ All models failed validation, using fallback: ${fallbackModel.name}`);
+    
+    await this.logModelSelection(
+      fallbackModel.modelId, 
+      fallbackModel.name, 
+      'FALLBACK_USED', 
+      modelFallbackChain.map(m => m.modelId)
+    );
+    
+    return fallbackModel.modelId;
   }
+
+  private async validateModelAvailability(modelId: string): Promise<boolean> {
+    try {
+      // Test model availability with a minimal request
+      const testCommand = new InvokeModelCommand({
+        modelId,
+        body: JSON.stringify({
+          anthropic_version: "bedrock-2023-05-31",
+          max_tokens: 1,
+          messages: [{ role: 'user', content: 'test' }]
+        })
+      });
+      
+      await this.executeWithRetry(() => this.bedrockRuntime.send(testCommand));
+      return true;
+      
+    } catch (error: any) {
+      console.error(`Model availability validation failed for ${modelId}:`, error.message);
+      
+      // Check if it's a model-specific error vs general API error
+      if (error.name === 'AccessDeniedException' && error.message?.includes('GetInferenceProfile')) {
+        console.error(`Model ${modelId} is being resolved as inference profile - this indicates a compatibility issue`);
+        return false;
+      }
+      
+      // Other errors might be temporary, so we'll consider the model potentially available
+      // but log the issue for monitoring
+      if (error.name === 'ThrottlingException' || error.name === 'ServiceUnavailableException') {
+        console.warn(`Temporary error validating ${modelId}, assuming available: ${error.message}`);
+        return true;
+      }
+      
+      return false;
+    }
+  }
+
+  private async logModelSelection(
+    selectedModelId: string,
+    selectedModelName: string,
+    selectionReason: string,
+    fallbacksAttempted: string[]
+  ): Promise<void> {
+    try {
+      // Log to CloudWatch for monitoring and debugging
+      const logData = {
+        timestamp: new Date().toISOString(),
+        selectedModel: selectedModelId,
+        selectedModelName,
+        selectionReason,
+        fallbacksAttempted,
+        environment: process.env.ENVIRONMENT || 'development'
+      };
+      
+      console.log('MODEL_SELECTION_LOG:', JSON.stringify(logData));
+      
+      // Track model selection metrics
+      const command = new PutMetricDataCommand({
+        Namespace: 'AI-Assistant/ModelSelection',
+        MetricData: [
+          {
+            MetricName: 'ModelSelectionEvent',
+            Value: 1,
+            Unit: 'Count',
+            Dimensions: [
+              { Name: 'SelectedModel', Value: selectedModelName },
+              { Name: 'SelectionReason', Value: selectionReason }
+            ]
+          },
+          {
+            MetricName: 'FallbacksAttempted',
+            Value: fallbacksAttempted.length,
+            Unit: 'Count',
+            Dimensions: [
+              { Name: 'SelectedModel', Value: selectedModelName }
+            ]
+          }
+        ]
+      });
+      
+      await this.cloudWatch.send(command);
+      
+    } catch (error) {
+      console.error('Failed to log model selection:', error);
+      // Don't throw - logging failure shouldn't break the main flow
+    }
+  }
+
+
 
   private async retrieveAndGenerate(
     question: string,
-    modelArn: string
+    modelId: string
   ): Promise<RetrieveAndGenerateCommandOutput> {
     const knowledgeBaseId = this.getKnowledgeBaseId();
+    
+    // CRITICAL FIX: Use model ID directly for on-demand foundation models
+    // For on-demand models like Claude 3.5 Sonnet v2, use model ID directly
+    // Using full ARN causes AWS SDK to try resolving as inference profile
+    console.log(`Using model ID for Knowledge Base (on-demand): ${modelId}`);
     
     const input: RetrieveAndGenerateCommandInput = {
       input: {
@@ -251,7 +375,7 @@ export class BedrockService {
         type: 'KNOWLEDGE_BASE',
         knowledgeBaseConfiguration: {
           knowledgeBaseId: knowledgeBaseId,
-          modelArn: modelArn,
+          modelArn: modelId, // Use model ID directly for on-demand models
           retrievalConfiguration: {
             vectorSearchConfiguration: {
               numberOfResults: 5,
@@ -270,13 +394,18 @@ export class BedrockService {
 
   private async retrieveAndGenerateAdvanced(
     question: string,
-    modelArn: string,
+    modelId: string,
     ragConfig: RAGConfiguration
   ): Promise<RetrieveAndGenerateCommandOutput> {
     const knowledgeBaseId = this.getKnowledgeBaseId();
     
     // Map our search type to AWS SDK search type
     const awsSearchType = this.mapSearchType(ragConfig.hybridSearch.searchType);
+    
+    // CRITICAL FIX: Use model ID directly for on-demand foundation models
+    // For on-demand models like Claude 3.5 Sonnet v2, use model ID directly
+    // Using full ARN causes AWS SDK to try resolving as inference profile
+    console.log(`Using model ID for Advanced RAG (on-demand): ${modelId}`);
     
     const input: RetrieveAndGenerateCommandInput = {
       input: {
@@ -286,7 +415,7 @@ export class BedrockService {
         type: 'KNOWLEDGE_BASE',
         knowledgeBaseConfiguration: {
           knowledgeBaseId: knowledgeBaseId,
-          modelArn: modelArn,
+          modelArn: modelId, // Use model ID directly for on-demand models
           retrievalConfiguration: {
             vectorSearchConfiguration: {
               numberOfResults: ragConfig.retrieval.numberOfResults,
@@ -427,16 +556,16 @@ export class BedrockService {
     }
   }
 
-  private extractModelName(modelArn: string): string {
-    // Extract readable model name from ARN
-    if (modelArn.includes('claude-opus-4-1')) {
+  private extractModelName(modelId: string): string {
+    // Extract readable model name from model ID
+    if (modelId.includes('claude-opus-4-1')) {
       return 'claude-opus-4-1';
-    } else if (modelArn.includes('claude-3-7-sonnet')) {
+    } else if (modelId.includes('claude-3-7-sonnet')) {
       return 'claude-3-7-sonnet';
-    } else if (modelArn.includes('claude-3-5-sonnet')) {
+    } else if (modelId.includes('claude-3-5-sonnet')) {
       return 'claude-3-5-sonnet-v2';
     }
-    return modelArn; // Return full ARN if no match
+    return modelId; // Return model ID if no match
   }
 
   private mapSearchType(searchType: string): 'HYBRID' | 'SEMANTIC' | undefined {

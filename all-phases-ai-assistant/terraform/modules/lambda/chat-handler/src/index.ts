@@ -1,7 +1,12 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
 import { BedrockService } from './bedrock-service';
-import { BedrockError, ChatRequest } from './types';
-import { validateChatRequest } from './validation';
+import { BedrockError } from './types';
+import {
+    APIGatewayEventSchema,
+    ChatRequest,
+    sanitizeInput,
+    validateChatRequest
+} from './validation';
 
 const bedrockService = new BedrockService();
 

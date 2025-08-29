@@ -154,7 +154,7 @@ export function createSecureErrorMessage(error: any): string {
   };
 
   if (error?.code && errorMap[error.code]) {
-    return errorMap[error.code];
+    return errorMap[error.code] || 'An unexpected error occurred. Please try again later.';
   }
 
   if (error?.message && typeof error.message === 'string') {

@@ -134,7 +134,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
     // Create uploading file entries
     const newUploadingFiles: UploadingFile[] = validFiles.map(file => ({
       file,
-      id: `${file.name}-${Date.now()}-${Math.random()}`,
+      id: `${encodeURIComponent(file.name)}-${Date.now()}-${Math.random()}`,
       progress: 0,
       status: 'uploading'
     }));

@@ -123,7 +123,8 @@ class ApiClient {
     delete headers['Content-Type']; // Let browser set content-type for FormData
 
     const formData = new FormData();
-    formData.append('file', file);
+    // Ensure filename is properly encoded for multipart form data
+    formData.append('file', file, encodeURIComponent(file.name));
 
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();

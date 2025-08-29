@@ -32,6 +32,9 @@ resource "aws_api_gateway_integration" "chat_ask_post" {
   integration_http_method = "POST"
   type                   = "AWS_PROXY"
   uri                    = aws_lambda_function.chat_endpoints.invoke_arn
+  
+  # Set timeout to maximum allowed (29 seconds)
+  timeout_milliseconds = 29000
 }
 
 # OPTIONS /chat/ask method for CORS preflight
@@ -86,6 +89,27 @@ resource "aws_api_gateway_integration" "chat_stream_post" {
   integration_http_method = "POST"
   type                   = "AWS_PROXY"
   uri                    = aws_lambda_function.chat_endpoints.invoke_arn
+}
+
+# OPTIONS /chat/stream method for CORS preflight
+resource "aws_api_gateway_method" "chat_stream_options" {
+  rest_api_id   = var.api_gateway_id
+  resource_id   = aws_api_gateway_resource.chat_stream.id
+  http_method   = "OPTIONS"
+  authorization = "NONE"
+}
+
+# OPTIONS /chat/stream integration
+resource "aws_api_gateway_integration" "chat_stream_options" {
+  rest_api_id = var.api_gateway_id
+  resource_id = aws_api_gateway_resource.chat_stream.id
+  http_method = aws_api_gateway_method.chat_stream_options.http_method
+
+  type                    = "MOCK"
+  passthrough_behavior    = "NEVER"
+  request_templates = {
+    "application/json" = "{\"statusCode\": 200}"
+  }
 }
 
 # /chat/conversations resource
@@ -259,7 +283,7 @@ resource "aws_lambda_function" "chat_endpoints" {
 
   runtime     = "nodejs20.x"
   memory_size = 1024
-  timeout     = 30
+  timeout     = 900  # 15 minutes for streaming responses
 
   environment {
     variables = {
@@ -513,6 +537,46 @@ resource "aws_api_gateway_method_response" "chat_stream_200" {
 
   response_parameters = {
     "method.response.header.Access-Control-Allow-Origin" = true
+  }
+}
+
+# POST integration response for CORS
+resource "aws_api_gateway_integration_response" "chat_stream_post_200" {
+  rest_api_id = var.api_gateway_id
+  resource_id = aws_api_gateway_resource.chat_stream.id
+  http_method = aws_api_gateway_method.chat_stream_post.http_method
+  status_code = aws_api_gateway_method_response.chat_stream_200.status_code
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin" = "'*'"
+  }
+}
+
+# OPTIONS method response for CORS preflight
+resource "aws_api_gateway_method_response" "chat_stream_options_200" {
+  rest_api_id = var.api_gateway_id
+  resource_id = aws_api_gateway_resource.chat_stream.id
+  http_method = aws_api_gateway_method.chat_stream_options.http_method
+  status_code = "200"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin"  = true
+    "method.response.header.Access-Control-Allow-Methods" = true
+    "method.response.header.Access-Control-Allow-Headers" = true
+  }
+}
+
+# OPTIONS integration response for CORS preflight
+resource "aws_api_gateway_integration_response" "chat_stream_options_200" {
+  rest_api_id = var.api_gateway_id
+  resource_id = aws_api_gateway_resource.chat_stream.id
+  http_method = aws_api_gateway_method.chat_stream_options.http_method
+  status_code = aws_api_gateway_method_response.chat_stream_options_200.status_code
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+    "method.response.header.Access-Control-Allow-Methods" = "'POST,OPTIONS'"
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,Authorization'"
   }
 }
 

@@ -207,16 +207,23 @@ export const DocumentList: React.FC<DocumentListProps> = ({
     }
   }, [filters, sortParams, state.nextToken]);
 
-  // Filter documents by search query (client-side)
-  const filteredDocuments = state.documents.filter(doc => {
-    if (!filters.searchQuery) return true;
-    const query = filters.searchQuery.toLowerCase();
-    return (
-      doc.fileName.toLowerCase().includes(query) ||
-      doc.originalName.toLowerCase().includes(query) ||
-      doc.uploadedBy.toLowerCase().includes(query)
-    );
-  });
+  // Filter documents by search query (client-side) and ensure proper sorting
+  const filteredDocuments = state.documents
+    .filter(doc => {
+      if (!filters.searchQuery) return true;
+      const query = filters.searchQuery.toLowerCase();
+      return (
+        doc.fileName.toLowerCase().includes(query) ||
+        doc.originalName.toLowerCase().includes(query) ||
+        doc.uploadedBy.toLowerCase().includes(query)
+      );
+    })
+    .sort((a, b) => {
+      // Ensure documents are sorted by upload date descending
+      const dateA = new Date(a.uploadDate).getTime();
+      const dateB = new Date(b.uploadDate).getTime();
+      return dateB - dateA; // Descending order (newest first)
+    });
 
   useEffect(() => {
     loadDocuments(true);
