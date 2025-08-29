@@ -3,6 +3,8 @@ export interface ChatRequest {
   conversationId?: string;
   userId: string;
   queryComplexity?: QueryComplexity;
+  includeSourceDetails: boolean;
+  useAdvancedRAG: boolean;
 }
 
 export interface ChatResponse {

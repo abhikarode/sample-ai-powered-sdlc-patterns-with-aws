@@ -52,3 +52,6 @@ logs/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Kiro configuration and workspace files
+.kiro/

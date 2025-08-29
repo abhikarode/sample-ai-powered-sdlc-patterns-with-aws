@@ -104,40 +104,43 @@ resource "aws_iam_policy" "chat_handler_logging" {
   })
 }
 
+# Data source for Bedrock policy document
+data "aws_iam_policy_document" "chat_handler_bedrock" {
+  statement {
+    effect = "Allow"
+    actions = [
+      "bedrock:InvokeModel",
+      "bedrock:InvokeModelWithResponseStream"
+    ]
+    resources = [
+      # Task 1: Claude 3.5 Haiku as primary model (reliable, cost-effective)
+      "arn:aws:bedrock:${data.aws_region.current.name}::foundation-model/anthropic.claude-3-5-haiku-20241022-v1:0",
+      # Task 1: Claude 3.5 Sonnet v2 as fallback (high quality, may have compatibility issues)
+      "arn:aws:bedrock:${data.aws_region.current.name}::foundation-model/anthropic.claude-3-5-sonnet-20241022-v2:0",
+      # Additional fallback models
+      "arn:aws:bedrock:${data.aws_region.current.name}::foundation-model/anthropic.claude-3-5-sonnet-20240620-v1:0",
+      "arn:aws:bedrock:${data.aws_region.current.name}::foundation-model/anthropic.claude-3-7-sonnet-20250219-v1:0"
+    ]
+  }
+  
+  statement {
+    effect = "Allow"
+    actions = [
+      "bedrock:RetrieveAndGenerate",
+      "bedrock:Retrieve"
+    ]
+    resources = [
+      "arn:aws:bedrock:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:knowledge-base/*"
+    ]
+  }
+}
+
 # Bedrock permissions for Lambda
 resource "aws_iam_policy" "chat_handler_bedrock" {
   name        = "ai-assistant-chat-handler-bedrock"
   path        = "/"
   description = "IAM policy for Bedrock access from chat handler Lambda"
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "bedrock:InvokeModel",
-          "bedrock:InvokeModelWithResponseStream"
-        ]
-        Resource = [
-          "arn:aws:bedrock:${data.aws_region.current.name}::foundation-model/anthropic.claude-sonnet-4-20250514-v1:0",
-          "arn:aws:bedrock:${data.aws_region.current.name}::foundation-model/anthropic.claude-opus-4-1-20250805-v1:0",
-          "arn:aws:bedrock:${data.aws_region.current.name}::foundation-model/anthropic.claude-3-7-sonnet-20250219-v1:0",
-          "arn:aws:bedrock:${data.aws_region.current.name}::foundation-model/anthropic.claude-3-5-sonnet-20241022-v2:0"
-        ]
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "bedrock:Retrieve",
-          "bedrock:RetrieveAndGenerate"
-        ]
-        Resource = [
-          "arn:aws:bedrock:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:knowledge-base/*"
-        ]
-      }
-    ]
-  })
+  policy      = data.aws_iam_policy_document.chat_handler_bedrock.json
 }
 
 # CloudWatch metrics permissions for Lambda

@@ -80,7 +80,31 @@ export const IngestionJobs: React.FC<IngestionJobsProps> = ({ onJobStart }) => {
       }
 
       const result = await response.json();
-      setJobs(result.data || []);
+      const jobs = result.data || [];
+      
+      // Sort jobs by startedAt timestamp descending (newest first)
+      const sortedJobs = [...jobs].sort((a: IngestionJobSummary, b: IngestionJobSummary) => {
+        // Parse dates and handle potential parsing issues
+        const dateA = new Date(a.startedAt);
+        const dateB = new Date(b.startedAt);
+        
+        // Check for invalid dates
+        if (isNaN(dateA.getTime()) || isNaN(dateB.getTime())) {
+          console.warn('Invalid date found in ingestion jobs:', { a: a.startedAt, b: b.startedAt });
+          return 0; // Keep original order if dates are invalid
+        }
+        
+        // Sort descending (newest first)
+        return dateB.getTime() - dateA.getTime();
+      });
+      
+      console.log('Sorted jobs by startedAt:', sortedJobs.map(job => ({ 
+        id: job.ingestionJobId, 
+        startedAt: job.startedAt,
+        parsed: new Date(job.startedAt).toISOString()
+      })));
+      
+      setJobs(sortedJobs);
       
     } catch (err: any) {
       console.error('Error fetching ingestion jobs:', err);

@@ -202,11 +202,7 @@ resource "aws_api_gateway_stage" "ai_assistant" {
   # Enable X-Ray tracing
   xray_tracing_enabled = true
 
-  # Throttling settings for rate limiting
-  throttle_settings {
-    rate_limit  = var.rate_limit
-    burst_limit = var.burst_limit
-  }
+  # Note: Throttling is configured at the method level, not stage level
 
   tags = var.tags
 }

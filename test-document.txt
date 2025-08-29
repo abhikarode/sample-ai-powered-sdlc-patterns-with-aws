@@ -1,0 +1,11 @@
+AI Assistant Documentation
+
+This AI Assistant is designed to help development teams by providing intelligent responses to questions about their uploaded documentation. 
+
+Key Features:
+- Powered by Amazon Bedrock and Claude AI models
+- Semantic search through uploaded documents
+- Source citations for all responses
+- Support for multiple document formats
+
+The assistant uses advanced RAG (Retrieval-Augmented Generation) to provide accurate, contextual answers based on your team's knowledge base.

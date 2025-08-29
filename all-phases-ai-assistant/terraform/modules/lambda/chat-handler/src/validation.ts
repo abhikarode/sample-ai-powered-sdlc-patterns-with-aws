@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { QueryComplexity } from './types';
 
 // Comprehensive input validation schemas using Zod
 export const ChatRequestSchema = z.object({
@@ -20,7 +21,7 @@ export const ChatRequestSchema = z.object({
     .regex(/^[a-zA-Z0-9_-]+$/, 'Conversation ID can only contain alphanumeric characters, hyphens, and underscores')
     .optional(),
   
-  queryComplexity: z.enum(['simple', 'complex'])
+  queryComplexity: z.nativeEnum(QueryComplexity)
     .optional(),
   
   includeSourceDetails: z.boolean()
@@ -33,14 +34,14 @@ export const ChatRequestSchema = z.object({
 // API Gateway event validation
 export const APIGatewayEventSchema = z.object({
   body: z.string().nullable(),
-  headers: z.record(z.string()).optional(),
+  headers: z.record(z.string(), z.string()).optional(),
   httpMethod: z.enum(['POST', 'OPTIONS']),
   path: z.string(),
-  queryStringParameters: z.record(z.string()).nullable(),
+  queryStringParameters: z.record(z.string(), z.string()).nullable(),
   requestContext: z.object({
     requestId: z.string(),
     authorizer: z.object({
-      claims: z.record(z.string()).optional()
+      claims: z.record(z.string(), z.string()).optional()
     }).optional()
   })
 });
@@ -77,7 +78,7 @@ export function validateChatRequest(body: any): ChatRequest {
     return result;
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const errorMessages = error.errors.map(err => `${err.path.join('.')}: ${err.message}`).join(', ');
+      const errorMessages = error.issues.map((err: any) => `${err.path.join('.')}: ${err.message}`).join(', ');
       throw new Error(`Validation failed: ${errorMessages}`);
     }
     throw error;

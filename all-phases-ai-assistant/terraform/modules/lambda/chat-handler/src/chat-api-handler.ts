@@ -4,10 +4,13 @@ import { ConversationService } from './conversation-service';
 import { StreamingService } from './streaming-service';
 import {
     BedrockError,
-    ChatApiRequest,
-    ChatRequest
+    ChatApiRequest
 } from './types';
-import { createValidationErrorResponse, validateChatApiRequest } from './validation';
+import {
+    ChatRequest,
+    createValidationErrorResponse,
+    validateChatRequest
+} from './validation';
 
 const bedrockService = new BedrockService();
 const conversationService = new ConversationService();
@@ -72,34 +75,30 @@ async function handleChatAsk(
 ): Promise<APIGatewayProxyResult> {
   // Parse and validate request
   const requestBody = parseRequestBody(event.body);
-  const validationErrors = validateChatApiRequest(requestBody);
-  
-  if (validationErrors.length > 0) {
-    return createValidationErrorResponse(validationErrors);
+  let chatRequest: ChatRequest;
+  try {
+    chatRequest = validateChatRequest(requestBody);
+  } catch (error) {
+    return createValidationErrorResponse([error instanceof Error ? error.message : 'Validation failed']);
   }
 
   const apiRequest: ChatApiRequest = requestBody;
   
   // Get or create conversation
-  let conversationId = apiRequest.conversationId;
+  let conversationId = apiRequest.conversationId || chatRequest.conversationId;
   if (!conversationId) {
-    conversationId = await conversationService.createConversation(apiRequest.userId);
+    conversationId = await conversationService.createConversation(chatRequest.userId);
   }
 
   // Add user message to conversation history
   await conversationService.addMessage(
     conversationId,
     'user',
-    apiRequest.question
+    chatRequest.question
   );
 
-  // Create chat request
-  const chatRequest: ChatRequest = {
-    question: apiRequest.question,
-    userId: apiRequest.userId,
-    conversationId,
-    queryComplexity: apiRequest.queryComplexity
-  };
+  // Update chat request with conversation ID
+  chatRequest.conversationId = conversationId;
 
   // Process chat request
   const useAdvancedRAG = apiRequest.useAdvancedRAG || process.env.ENABLE_ADVANCED_RAG === 'true';
@@ -130,10 +129,11 @@ async function handleStreamingChat(
 ): Promise<APIGatewayProxyResult> {
   // Parse and validate request
   const requestBody = parseRequestBody(event.body);
-  const validationErrors = validateChatApiRequest(requestBody);
-  
-  if (validationErrors.length > 0) {
-    return createValidationErrorResponse(validationErrors);
+  let chatRequest: ChatRequest;
+  try {
+    chatRequest = validateChatRequest(requestBody);
+  } catch (error) {
+    return createValidationErrorResponse([error instanceof Error ? error.message : 'Validation failed']);
   }
 
   const apiRequest: ChatApiRequest = requestBody;
@@ -152,13 +152,8 @@ async function handleStreamingChat(
   );
 
   try {
-    // First, retrieve relevant documents using Knowledge Base
-    const chatRequest: ChatRequest = {
-      question: apiRequest.question,
-      userId: apiRequest.userId,
-      conversationId,
-      queryComplexity: apiRequest.queryComplexity
-    };
+    // Update chat request with conversation ID
+    chatRequest.conversationId = conversationId;
 
     // Get sources from Knowledge Base (without generating response)
     const ragResponse = await bedrockService.handleChatQuery(chatRequest);
@@ -199,12 +194,7 @@ async function handleStreamingChat(
     console.error('Streaming chat error:', error);
     
     // Fallback to non-streaming response
-    const chatRequest: ChatRequest = {
-      question: apiRequest.question,
-      userId: apiRequest.userId,
-      conversationId,
-      queryComplexity: apiRequest.queryComplexity
-    };
+    // Use the validated chatRequest with updated conversationId
 
     const response = await bedrockService.handleChatQuery(chatRequest);
     

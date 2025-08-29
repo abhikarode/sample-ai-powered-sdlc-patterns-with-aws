@@ -6,7 +6,7 @@ import { FrontendConfig } from '@/types/api';
 // Production configuration from Terraform outputs
 const defaultConfig: FrontendConfig = {
   aws_region: 'us-west-2',
-  cognito_user_pool_id: 'us-west-2_tsucnmtVS',
+  cognito_user_pool_id: 'us-west-2_FLJTm8Xt8',
   cognito_user_pool_client_id: '9v2eolu2f67choj7s93sgu386',
   cognito_user_pool_domain: 'ai-assistant-auth-6r4d4cqe',
   api_gateway_url: 'https://ojfkk555ge.execute-api.us-west-2.amazonaws.com/dev',
