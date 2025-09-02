@@ -83,7 +83,7 @@ export const KnowledgeBaseMetrics: React.FC<KnowledgeBaseMetricsProps> = ({ onRe
       }
 
       const result = await response.json();
-      setMetrics(result.data);
+      setMetrics(result.data?.data || result.data);
       
     } catch (err: any) {
       console.error('Error fetching Knowledge Base metrics:', err);
@@ -108,7 +108,8 @@ export const KnowledgeBaseMetrics: React.FC<KnowledgeBaseMetricsProps> = ({ onRe
     return () => clearInterval(interval);
   }, []);
 
-  const formatNumber = (num: number): string => {
+  const formatNumber = (num: number | undefined | null): string => {
+    if (num === undefined || num === null || isNaN(num)) return '0';
     if (num >= 1000000) {
       return (num / 1000000).toFixed(1) + 'M';
     } else if (num >= 1000) {
@@ -117,7 +118,8 @@ export const KnowledgeBaseMetrics: React.FC<KnowledgeBaseMetricsProps> = ({ onRe
     return num.toString();
   };
 
-  const formatResponseTime = (ms: number): string => {
+  const formatResponseTime = (ms: number | undefined | null): string => {
+    if (ms === undefined || ms === null || isNaN(ms)) return '0ms';
     if (ms >= 1000) {
       return (ms / 1000).toFixed(1) + 's';
     }
@@ -203,7 +205,7 @@ export const KnowledgeBaseMetrics: React.FC<KnowledgeBaseMetricsProps> = ({ onRe
             <div>
               <p className="text-white/60 text-sm">Total Documents</p>
               <p className="text-2xl font-bold text-white">{formatNumber(metrics.totalDocuments)}</p>
-              <p className="text-green-400 text-xs">+{metrics.documentsProcessedToday} today</p>
+              <p className="text-green-400 text-xs">+{formatNumber(metrics.documentsProcessedToday)} today</p>
             </div>
             <FileText className="w-8 h-8 text-blue-400" />
           </div>
@@ -215,7 +217,7 @@ export const KnowledgeBaseMetrics: React.FC<KnowledgeBaseMetricsProps> = ({ onRe
             <div>
               <p className="text-white/60 text-sm">Total Queries</p>
               <p className="text-2xl font-bold text-white">{formatNumber(metrics.totalQueries)}</p>
-              <p className="text-green-400 text-xs">+{metrics.queriesProcessedToday} today</p>
+              <p className="text-green-400 text-xs">+{formatNumber(metrics.queriesProcessedToday)} today</p>
             </div>
             <MessageCircle className="w-8 h-8 text-green-400" />
           </div>
@@ -238,7 +240,7 @@ export const KnowledgeBaseMetrics: React.FC<KnowledgeBaseMetricsProps> = ({ onRe
           <div className="flex items-center justify-between">
             <div>
               <p className="text-white/60 text-sm">Success Rate</p>
-              <p className="text-2xl font-bold text-white">{metrics.successRate.toFixed(1)}%</p>
+              <p className="text-2xl font-bold text-white">{(metrics.successRate || 0).toFixed(1)}%</p>
               <p className="text-green-400 text-xs">Last 24h</p>
             </div>
             <CheckCircle className="w-8 h-8 text-green-400" />
@@ -254,7 +256,7 @@ export const KnowledgeBaseMetrics: React.FC<KnowledgeBaseMetricsProps> = ({ onRe
             <Users className="w-5 h-5 text-purple-400" />
             <div>
               <p className="text-white/60 text-xs">Active Users</p>
-              <p className="text-lg font-semibold text-white">{metrics.activeUsers}</p>
+              <p className="text-lg font-semibold text-white">{formatNumber(metrics.activeUsers)}</p>
             </div>
           </div>
         </div>
@@ -265,7 +267,7 @@ export const KnowledgeBaseMetrics: React.FC<KnowledgeBaseMetricsProps> = ({ onRe
             <AlertTriangle className="w-5 h-5 text-red-400" />
             <div>
               <p className="text-white/60 text-xs">Failed Ingestions</p>
-              <p className="text-lg font-semibold text-white">{metrics.failedIngestions}</p>
+              <p className="text-lg font-semibold text-white">{formatNumber(metrics.failedIngestions)}</p>
             </div>
           </div>
         </div>
@@ -276,7 +278,7 @@ export const KnowledgeBaseMetrics: React.FC<KnowledgeBaseMetricsProps> = ({ onRe
             <Activity className="w-5 h-5 text-cyan-400" />
             <div>
               <p className="text-white/60 text-xs">Storage Used</p>
-              <p className="text-lg font-semibold text-white">{metrics.storageUsed}</p>
+              <p className="text-lg font-semibold text-white">{metrics.storageUsed || 'N/A'}</p>
             </div>
           </div>
         </div>
@@ -288,7 +290,7 @@ export const KnowledgeBaseMetrics: React.FC<KnowledgeBaseMetricsProps> = ({ onRe
             <div>
               <p className="text-white/60 text-xs">Last Updated</p>
               <p className="text-sm font-medium text-white">
-                {new Date(metrics.lastUpdated).toLocaleTimeString()}
+                {metrics.lastUpdated ? new Date(metrics.lastUpdated).toLocaleTimeString() : 'N/A'}
               </p>
             </div>
           </div>
@@ -304,9 +306,9 @@ export const KnowledgeBaseMetrics: React.FC<KnowledgeBaseMetricsProps> = ({ onRe
             <span>Query Trends (7 days)</span>
           </h4>
           <div className="space-y-2">
-            {metrics.queryTrends.map((trend, index) => (
+            {(metrics.queryTrends || []).map((trend, index) => (
               <div key={index} className="flex items-center justify-between text-sm">
-                <span className="text-white/60">{trend.period}</span>
+                <span className="text-white/60">{trend.period || 'N/A'}</span>
                 <span className="text-white font-medium">{formatNumber(trend.count)}</span>
               </div>
             ))}
@@ -320,9 +322,9 @@ export const KnowledgeBaseMetrics: React.FC<KnowledgeBaseMetricsProps> = ({ onRe
             <span>Document Trends (7 days)</span>
           </h4>
           <div className="space-y-2">
-            {metrics.documentTrends.map((trend, index) => (
+            {(metrics.documentTrends || []).map((trend, index) => (
               <div key={index} className="flex items-center justify-between text-sm">
-                <span className="text-white/60">{trend.period}</span>
+                <span className="text-white/60">{trend.period || 'N/A'}</span>
                 <span className="text-white font-medium">{formatNumber(trend.count)}</span>
               </div>
             ))}

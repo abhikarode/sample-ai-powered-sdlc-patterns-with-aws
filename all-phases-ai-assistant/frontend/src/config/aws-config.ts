@@ -7,9 +7,9 @@ import { FrontendConfig } from '@/types/api';
 const defaultConfig: FrontendConfig = {
   aws_region: 'us-west-2',
   cognito_user_pool_id: 'us-west-2_FLJTm8Xt8',
-  cognito_user_pool_client_id: '9v2eolu2f67choj7s93sgu386',
-  cognito_user_pool_domain: 'ai-assistant-auth-6r4d4cqe',
-  api_gateway_url: 'https://ojfkk555ge.execute-api.us-west-2.amazonaws.com/dev',
+  cognito_user_pool_client_id: '3gr32ei5n768d88h02klhmpn8v',
+  cognito_user_pool_domain: 'ai-assistant-auth-3gja49wa',
+  api_gateway_url: 'https://jpt8wzkowd.execute-api.us-west-2.amazonaws.com/dev',
   cloudfront_url: 'https://dq9tlzfsf1veq.cloudfront.net',
   environment: 'dev',
   project_name: 'ai-assistant'

@@ -69,7 +69,7 @@ export const KnowledgeBaseStatus: React.FC<KnowledgeBaseStatusProps> = ({ onRefr
       }
 
       const result = await response.json();
-      setStatus(result.data);
+      setStatus(result.data?.data || result.data);
       
     } catch (err: any) {
       console.error('Error fetching Knowledge Base status:', err);
@@ -91,6 +91,7 @@ export const KnowledgeBaseStatus: React.FC<KnowledgeBaseStatusProps> = ({ onRefr
   }, []);
 
   const getStatusIcon = (statusValue: string) => {
+    if (!statusValue || typeof statusValue !== 'string') return <Activity className="w-5 h-5 text-gray-400" />;
     switch (statusValue.toUpperCase()) {
       case 'ACTIVE':
       case 'AVAILABLE':
@@ -109,6 +110,7 @@ export const KnowledgeBaseStatus: React.FC<KnowledgeBaseStatusProps> = ({ onRefr
   };
 
   const getStatusColor = (statusValue: string) => {
+    if (!statusValue || typeof statusValue !== 'string') return 'text-gray-400';
     switch (statusValue.toUpperCase()) {
       case 'ACTIVE':
       case 'AVAILABLE':
@@ -202,7 +204,7 @@ export const KnowledgeBaseStatus: React.FC<KnowledgeBaseStatusProps> = ({ onRefr
             <div className="flex items-center space-x-2">
               {getStatusIcon(status.status)}
               <span className={`font-medium ${getStatusColor(status.status)}`}>
-                {status.status}
+                {status.status || 'Unknown'}
               </span>
             </div>
           </div>
@@ -212,7 +214,7 @@ export const KnowledgeBaseStatus: React.FC<KnowledgeBaseStatusProps> = ({ onRefr
             <div className="flex items-center space-x-2">
               {getStatusIcon(status.dataSourceStatus)}
               <span className={`font-medium ${getStatusColor(status.dataSourceStatus)}`}>
-                {status.dataSourceStatus}
+                {status.dataSourceStatus || 'Unknown'}
               </span>
             </div>
           </div>
@@ -222,7 +224,7 @@ export const KnowledgeBaseStatus: React.FC<KnowledgeBaseStatusProps> = ({ onRefr
             <div className="flex items-center space-x-2">
               {getStatusIcon(status.vectorIndexStatus)}
               <span className={`font-medium ${getStatusColor(status.vectorIndexStatus)}`}>
-                {status.vectorIndexStatus}
+                {status.vectorIndexStatus || 'Unknown'}
               </span>
             </div>
           </div>
@@ -234,21 +236,21 @@ export const KnowledgeBaseStatus: React.FC<KnowledgeBaseStatusProps> = ({ onRefr
             <span className="text-white/60">Documents</span>
             <div className="flex items-center space-x-2">
               <FileText className="w-4 h-4 text-blue-400" />
-              <span className="font-medium text-white">{status.documentCount}</span>
+              <span className="font-medium text-white">{status.documentCount || 0}</span>
             </div>
           </div>
 
           <div className="flex items-center justify-between">
             <span className="text-white/60">Last Sync</span>
             <span className="font-medium text-white">
-              {new Date(status.lastSyncTime).toLocaleString()}
+              {status.lastSyncTime ? new Date(status.lastSyncTime).toLocaleString() : 'N/A'}
             </span>
           </div>
 
           <div className="flex items-center justify-between">
             <span className="text-white/60">KB ID</span>
             <span className="font-mono text-sm text-white/80">
-              {status.knowledgeBaseId}
+              {status.knowledgeBaseId || 'N/A'}
             </span>
           </div>
         </div>
@@ -259,7 +261,7 @@ export const KnowledgeBaseStatus: React.FC<KnowledgeBaseStatusProps> = ({ onRefr
         <div className="flex items-center justify-between">
           <span className="text-white/60">Embedding Model</span>
           <span className="font-mono text-sm text-white/80">
-            {status.embeddingModel.split('/').pop()}
+            {status.embeddingModel && typeof status.embeddingModel === 'string' ? status.embeddingModel.split('/').pop() : 'N/A'}
           </span>
         </div>
       </div>

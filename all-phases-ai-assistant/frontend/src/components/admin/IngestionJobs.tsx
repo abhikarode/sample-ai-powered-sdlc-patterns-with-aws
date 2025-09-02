@@ -80,7 +80,8 @@ export const IngestionJobs: React.FC<IngestionJobsProps> = ({ onJobStart }) => {
       }
 
       const result = await response.json();
-      const jobs = result.data || [];
+      const jobsData = result.data?.data || result.data || result;
+      const jobs = Array.isArray(jobsData) ? jobsData : [];
       
       // Sort jobs by startedAt timestamp descending (newest first)
       const sortedJobs = [...jobs].sort((a: IngestionJobSummary, b: IngestionJobSummary) => {

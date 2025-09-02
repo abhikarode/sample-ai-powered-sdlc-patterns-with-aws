@@ -8,6 +8,13 @@ import { DynamoDBClient, PutItemCommand } from '@aws-sdk/client-dynamodb';
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
 import { v4 as uuidv4 } from 'uuid';
+import {
+    createCORSConfigFromEnv,
+    createErrorResponse,
+    createSuccessResponse,
+    extractOriginFromEvent,
+    handleOPTIONSRequest
+} from './cors-utils';
 
 // AWS clients with proper region and profile configuration
 const s3Client = new S3Client({ 
@@ -22,6 +29,13 @@ const bedrockClient = new BedrockAgentClient({
   region: process.env.AWS_REGION || 'us-west-2'
 });
 
+const lambdaClient = new LambdaClient({ 
+  region: process.env.AWS_REGION || 'us-west-2'
+});
+
+// Create CORS configuration from environment variables
+const corsConfig = createCORSConfigFromEnv();
+
 // Configuration constants
 const SUPPORTED_MIME_TYPES = [
   'application/pdf',
@@ -30,7 +44,7 @@ const SUPPORTED_MIME_TYPES = [
   'text/markdown'
 ] as const;
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB (Lambda payload limit is 6MB)
 const SUPPORTED_EXTENSIONS = ['.pdf', '.docx', '.txt', '.md'] as const;
 
 // Enhanced error types for better error handling
@@ -64,24 +78,25 @@ export const handler = async (
 ): Promise<APIGatewayProxyResult> => {
   const startTime = Date.now();
   const requestId = context.awsRequestId;
+  const requestOrigin = extractOriginFromEvent(event);
   
   console.log('Document upload request received:', {
     requestId,
     method: event.httpMethod,
-    path: event.path
+    path: event.path,
+    origin: requestOrigin
   });
 
   try {
+    // Handle CORS preflight
+    if (event.httpMethod === 'OPTIONS') {
+      return handleOPTIONSRequest(requestOrigin, corsConfig);
+    }
+
     // Validate authorization
     if (!event.requestContext?.authorizer?.claims?.sub) {
       console.warn('Authorization failed:', { requestId });
-      return {
-        statusCode: 401,
-        headers: getCorsHeaders(),
-        body: JSON.stringify({
-          error: 'Unauthorized - missing user authentication'
-        })
-      };
+      return createErrorResponse(401, 'Unauthorized - missing user authentication', requestId, 'UNAUTHORIZED', requestOrigin, corsConfig);
     }
 
     const userId = event.requestContext.authorizer.claims.sub;
@@ -93,30 +108,12 @@ export const handler = async (
     // Enhanced file validation
     if (!SUPPORTED_MIME_TYPES.includes(contentType as any)) {
       console.warn('Invalid file type:', { requestId, contentType, fileName });
-      return {
-        statusCode: 400,
-        headers: getCorsHeaders(),
-        body: JSON.stringify({
-          success: false,
-          error: {
-            message: 'Unsupported file type. Supported types: PDF, DOCX, TXT, MD'
-          }
-        })
-      };
+      return createErrorResponse(400, 'Unsupported file type. Supported types: PDF, DOCX, TXT, MD', requestId, 'INVALID_FILE_TYPE', requestOrigin, corsConfig);
     }
 
     if (fileBuffer.length > MAX_FILE_SIZE) {
       console.warn('File too large:', { requestId, fileSize: fileBuffer.length, fileName });
-      return {
-        statusCode: 400,
-        headers: getCorsHeaders(),
-        body: JSON.stringify({
-          success: false,
-          error: {
-            message: 'File size exceeds 10MB limit'
-          }
-        })
-      };
+      return createErrorResponse(400, 'File size exceeds 10MB limit', requestId, 'FILE_TOO_LARGE', requestOrigin, corsConfig);
     }
 
     console.log('File validation passed:', {
@@ -201,6 +198,7 @@ export const handler = async (
     // Trigger Knowledge Base ingestion with enhanced error handling
     console.log('Triggering Knowledge Base ingestion:', { requestId, documentId });
     
+    let ingestionJobStarted = false;
     try {
       await bedrockClient.send(new StartIngestionJobCommand({
         knowledgeBaseId: process.env.KNOWLEDGE_BASE_ID!,
@@ -208,6 +206,7 @@ export const handler = async (
         description: `Ingestion job for document ${fileName} uploaded by ${userId}`
       }));
       console.log('Knowledge Base ingestion job started:', { requestId, documentId });
+      ingestionJobStarted = true;
     } catch (ingestionError: any) {
       // Handle ongoing ingestion job conflict gracefully
       if (ingestionError.name === 'ConflictException') {
@@ -240,6 +239,30 @@ export const handler = async (
       }
     }
 
+    // Trigger sync monitor to check ingestion status (with delay to allow ingestion job to start)
+    if (ingestionJobStarted) {
+      try {
+        console.log('Triggering KB sync monitor:', { requestId, documentId });
+        
+        // Invoke sync monitor asynchronously with a slight delay
+        await lambdaClient.send(new InvokeCommand({
+          FunctionName: process.env.KB_SYNC_MONITOR_FUNCTION || 'ai-assistant-dev-kb-sync-monitor',
+          InvocationType: 'Event', // Async invocation
+          Payload: JSON.stringify({
+            source: 'document-upload',
+            documentId,
+            requestId,
+            triggerDelay: 30000 // 30 second delay to allow ingestion job to start
+          })
+        }));
+        
+        console.log('KB sync monitor triggered successfully:', { requestId, documentId });
+      } catch (syncError) {
+        console.warn('Failed to trigger sync monitor (non-critical):', { requestId, error: syncError });
+        // Don't fail the upload if sync monitor trigger fails
+      }
+    }
+
     const processingTime = Date.now() - startTime;
     console.log('Document upload completed successfully:', { 
       requestId, 
@@ -247,22 +270,15 @@ export const handler = async (
       processingTime: `${processingTime}ms` 
     });
 
-    return {
-      statusCode: 200,
-      headers: getCorsHeaders(),
-      body: JSON.stringify({
-        success: true,
-        data: {
-          documentId,
-          fileName,
-          fileSize: fileBuffer.length,
-          status: 'uploaded',
-          knowledgeBaseStatus: 'pending',
-          message: 'Document uploaded successfully and Knowledge Base sync initiated',
-          processingTime: `${processingTime}ms`
-        }
-      })
-    };
+    return createSuccessResponse({
+      documentId,
+      fileName,
+      fileSize: fileBuffer.length,
+      status: 'uploaded',
+      knowledgeBaseStatus: 'pending',
+      message: 'Document uploaded successfully and Knowledge Base sync initiated',
+      processingTime: `${processingTime}ms`
+    }, 200, requestOrigin, corsConfig);
 
   } catch (error) {
     console.error('Document upload error:', error);
@@ -270,46 +286,19 @@ export const handler = async (
     // Handle specific error types
     if (error instanceof Error) {
       if (error.message.includes('Invalid file upload')) {
-        return {
-          statusCode: 400,
-          headers: getCorsHeaders(),
-          body: JSON.stringify({
-            error: 'Invalid file upload format'
-          })
-        };
+        return createErrorResponse(400, 'Invalid file upload format', requestId, 'INVALID_MULTIPART', requestOrigin, corsConfig);
       }
       
       if (error.message.includes('S3')) {
-        return {
-          statusCode: 500,
-          headers: getCorsHeaders(),
-          body: JSON.stringify({
-            error: 'Upload failed - S3 error'
-          })
-        };
+        return createErrorResponse(500, 'Upload failed - S3 error', requestId, 'S3_UPLOAD_FAILED', requestOrigin, corsConfig);
       }
       
       if (error.message.includes('DynamoDB')) {
-        return {
-          statusCode: 500,
-          headers: getCorsHeaders(),
-          body: JSON.stringify({
-            error: 'Metadata storage failed - DynamoDB error'
-          })
-        };
+        return createErrorResponse(500, 'Metadata storage failed - DynamoDB error', requestId, 'DYNAMODB_ERROR', requestOrigin, corsConfig);
       }
     }
 
-    return {
-      statusCode: 500,
-      headers: getCorsHeaders(),
-      body: JSON.stringify({
-        success: false,
-        error: {
-          message: 'Internal server error during document upload'
-        }
-      })
-    };
+    return createErrorResponse(500, 'An unexpected error occurred during document upload', requestId, 'INTERNAL_ERROR', requestOrigin, corsConfig);
   }
 };
 
@@ -370,37 +359,7 @@ async function parseAndValidateFile(body: string, requestId: string): Promise<{
   return fileData;
 }
 
-function createErrorResponse(statusCode: number, errorType: DocumentUploadError, message: string): APIGatewayProxyResult {
-  return {
-    statusCode,
-    headers: getCorsHeaders(),
-    body: JSON.stringify({
-      error: message,
-      errorType,
-      timestamp: new Date().toISOString()
-    })
-  };
-}
 
-function createSuccessResponse(data: any): APIGatewayProxyResult {
-  return {
-    statusCode: 200,
-    headers: getCorsHeaders(),
-    body: JSON.stringify({
-      ...data,
-      timestamp: new Date().toISOString()
-    })
-  };
-}
-
-function getCorsHeaders() {
-  return {
-    'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-    'Access-Control-Allow-Methods': 'POST,OPTIONS'
-  };
-}
 
 function getFileExtension(fileName: string, contentType: string): string {
   // Extract extension from filename first

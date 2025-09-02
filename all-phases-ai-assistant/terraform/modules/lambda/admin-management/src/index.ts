@@ -12,15 +12,22 @@ import {
     retryIngestionJob,
     startDataSourceSync
 } from './admin-service';
+import {
+    createCORSConfigFromEnv,
+    createErrorResponse,
+    createSuccessResponse,
+    extractOriginFromEvent,
+    handleOPTIONSRequest
+} from './cors-utils';
 
 // Enhanced validation schemas for admin operations
 const AdminRequestSchema = z.object({
   body: z.string().nullable(),
-  headers: z.record(z.string()).optional(),
+  headers: z.record(z.string(), z.string()).optional(),
   httpMethod: z.enum(['GET', 'POST', 'OPTIONS']),
   path: z.string(),
-  pathParameters: z.record(z.string()).nullable(),
-  queryStringParameters: z.record(z.string()).nullable(),
+  pathParameters: z.record(z.string(), z.string()).nullable(),
+  queryStringParameters: z.record(z.string(), z.string()).nullable(),
   requestContext: z.object({
     requestId: z.string(),
     authorizer: z.object({
@@ -34,54 +41,8 @@ const AdminRequestSchema = z.object({
   })
 });
 
-// Security headers for API responses
-const SECURITY_HEADERS = {
-  'Access-Control-Allow-Origin': process.env.ALLOWED_ORIGINS || 'https://diaxl2ky359mj.cloudfront.net',
-  'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
-  'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-  'Content-Type': 'application/json',
-  'X-Content-Type-Options': 'nosniff',
-  'X-Frame-Options': 'DENY',
-  'X-XSS-Protection': '1; mode=block',
-  'Strict-Transport-Security': 'max-age=31536000; includeSubDomains'
-};
-
-/**
- * Create standardized API response with security headers
- */
-function createResponse(statusCode: number, body: any): APIGatewayProxyResult {
-  return {
-    statusCode,
-    headers: SECURITY_HEADERS,
-    body: JSON.stringify(body)
-  };
-}
-
-/**
- * Create error response with proper logging
- */
-function createErrorResponse(
-  statusCode: number,
-  message: string,
-  requestId: string,
-  code?: string
-): APIGatewayProxyResult {
-  // Log error without sensitive information
-  console.error(`Admin Error ${statusCode}:`, { message, code, requestId });
-  
-  return {
-    statusCode,
-    headers: SECURITY_HEADERS,
-    body: JSON.stringify({
-      error: {
-        code: code || 'INTERNAL_ERROR',
-        message,
-        requestId,
-        timestamp: new Date().toISOString()
-      }
-    })
-  };
-}
+// Create CORS configuration from environment variables
+const corsConfig = createCORSConfigFromEnv();
 
 /**
  * Extract user information from Cognito JWT token
@@ -137,12 +98,14 @@ export const handler = async (
   context: Context
 ): Promise<APIGatewayProxyResult> => {
   const requestId = context.awsRequestId;
+  const requestOrigin = extractOriginFromEvent(event);
   
   // Log only non-sensitive request metadata
   console.log('Admin management request:', {
     requestId,
     method: event.httpMethod,
     path: event.path,
+    origin: requestOrigin,
     userAgent: event.headers?.['User-Agent']?.substring(0, 100) || 'unknown'
   });
   
@@ -151,21 +114,17 @@ export const handler = async (
     try {
       AdminRequestSchema.parse(event);
     } catch (error) {
-      return createErrorResponse(400, 'Invalid request structure', requestId, 'INVALID_REQUEST');
+      return createErrorResponse(400, 'Invalid request structure', requestId, 'INVALID_REQUEST', requestOrigin, corsConfig);
     }
 
     // Handle CORS preflight requests
     if (event.httpMethod === 'OPTIONS') {
-      return {
-        statusCode: 200,
-        headers: SECURITY_HEADERS,
-        body: JSON.stringify({ message: 'CORS preflight successful' })
-      };
+      return handleOPTIONSRequest(requestOrigin, corsConfig);
     }
 
     // Validate HTTP method
     if (!['GET', 'POST'].includes(event.httpMethod)) {
-      return createErrorResponse(405, 'Method not allowed', requestId, 'METHOD_NOT_ALLOWED');
+      return createErrorResponse(405, 'Method not allowed', requestId, 'METHOD_NOT_ALLOWED', requestOrigin, corsConfig);
     }
     
     // Extract and validate user information with enhanced security
@@ -184,14 +143,11 @@ export const handler = async (
     
     switch (method) {
       case 'GET':
-        return await handleGetRequest(pathParameters, queryParameters, requestId, userId, sourceIp, userAgent);
+        return await handleGetRequest(pathParameters, queryParameters, requestId, userId, sourceIp, userAgent, requestOrigin);
       case 'POST':
-        return await handlePostRequest(pathParameters, event.body, requestId, userId, sourceIp, userAgent);
+        return await handlePostRequest(pathParameters, event.body, requestId, userId, sourceIp, userAgent, requestOrigin);
       default:
-        return createResponse(405, {
-          error: 'Method not allowed',
-          message: `HTTP method ${method} is not supported`
-        });
+        return createErrorResponse(405, 'Method not allowed', requestId, 'METHOD_NOT_ALLOWED', requestOrigin, corsConfig);
     }
     
   } catch (error: any) {
@@ -204,19 +160,19 @@ export const handler = async (
     });
     
     if (error.message.includes('Admin access required') || error.message.includes('insufficient permissions')) {
-      return createErrorResponse(403, 'Admin access required for this operation', requestId, 'FORBIDDEN');
+      return createErrorResponse(403, 'Admin access required for this operation', requestId, 'FORBIDDEN', requestOrigin, corsConfig);
     }
     
     if (error.message === 'No authorization claims found' || error.message === 'Invalid user identification') {
-      return createErrorResponse(401, 'Valid authentication required', requestId, 'UNAUTHORIZED');
+      return createErrorResponse(401, 'Valid authentication required', requestId, 'UNAUTHORIZED', requestOrigin, corsConfig);
     }
     
     if (error.message === 'Invalid request structure') {
-      return createErrorResponse(400, 'Invalid request format', requestId, 'BAD_REQUEST');
+      return createErrorResponse(400, 'Invalid request format', requestId, 'BAD_REQUEST', requestOrigin, corsConfig);
     }
     
     // Generic error for unexpected issues
-    return createErrorResponse(500, 'An error occurred processing the admin request', requestId, 'INTERNAL_ERROR');
+    return createErrorResponse(500, 'An error occurred processing the admin request', requestId, 'INTERNAL_ERROR', requestOrigin, corsConfig);
   }
 };
 
@@ -229,7 +185,8 @@ async function handleGetRequest(
   requestId: string,
   userId?: string,
   sourceIp?: string,
-  userAgent?: string
+  userAgent?: string,
+  requestOrigin?: string
 ): Promise<APIGatewayProxyResult> {
   
   const resource = pathParameters.proxy || pathParameters.resource;
@@ -244,11 +201,10 @@ async function handleGetRequest(
         await logAdminAction(userId, 'GET_KNOWLEDGE_BASE_STATUS', { requestId }, sourceIp, userAgent);
       }
       
-      return createResponse(200, {
-        success: true,
+      return createSuccessResponse({
         data: status,
         requestId
-      });
+      }, 200, requestOrigin, corsConfig);
       
     case 'knowledge-base/ingestion-jobs':
       console.log('Listing ingestion jobs:', { requestId, statusFilter: queryParameters.status });
@@ -263,12 +219,11 @@ async function handleGetRequest(
         }, sourceIp, userAgent);
       }
       
-      return createResponse(200, {
-        success: true,
+      return createSuccessResponse({
         data: jobs,
         count: jobs.length,
         requestId
-      });
+      }, 200, requestOrigin, corsConfig);
       
     case 'knowledge-base/metrics':
       console.log('Getting Knowledge Base metrics:', { requestId });
@@ -295,11 +250,10 @@ async function handleGetRequest(
         }, sourceIp, userAgent);
       }
       
-      return createResponse(200, {
-        success: true,
+      return createSuccessResponse({
         data: metrics,
         requestId
-      });
+      }, 200, requestOrigin, corsConfig);
       
     default:
       // Check if it's an ingestion job detail request (pattern: knowledge-base/ingestion-jobs/{jobId})
@@ -308,19 +262,11 @@ async function handleGetRequest(
         if (jobId && !resource.includes('/retry') && !resource.includes('/cancel')) {
           console.log('Getting ingestion job details:', { requestId, jobId });
           // For now, return a message that individual job details are not yet implemented
-          return createResponse(501, {
-            success: false,
-            error: 'Not Implemented',
-            message: 'Individual ingestion job details are not yet implemented. Use the list endpoint to see all jobs.',
-            requestId
-          });
+          return createErrorResponse(501, 'Individual ingestion job details are not yet implemented. Use the list endpoint to see all jobs.', requestId, 'NOT_IMPLEMENTED', requestOrigin, corsConfig);
         }
       }
       
-      return createResponse(404, {
-        error: 'Not Found',
-        message: `Admin resource '${resource}' not found`
-      });
+      return createErrorResponse(404, `Admin resource '${resource}' not found`, requestId, 'NOT_FOUND', requestOrigin, corsConfig);
   }
 }
 
@@ -333,7 +279,8 @@ async function handlePostRequest(
   requestId: string,
   userId?: string,
   sourceIp?: string,
-  userAgent?: string
+  userAgent?: string,
+  requestOrigin?: string
 ): Promise<APIGatewayProxyResult> {
   
   const resource = pathParameters.proxy || pathParameters.resource;
@@ -352,12 +299,11 @@ async function handlePostRequest(
         }, sourceIp, userAgent);
       }
       
-      return createResponse(200, {
-        success: true,
+      return createSuccessResponse({
         message: 'Data source synchronization started',
         data: syncResult,
         requestId
-      });
+      }, 200, requestOrigin, corsConfig);
       
     default:
       // Check for ingestion job actions (pattern: knowledge-base/ingestion-jobs/{jobId}/{action})
@@ -381,12 +327,11 @@ async function handlePostRequest(
               }, sourceIp, userAgent);
             }
             
-            return createResponse(200, {
-              success: true,
+            return createSuccessResponse({
               message: 'Ingestion job retry initiated',
               data: retryResult,
               requestId
-            });
+            }, 200, requestOrigin, corsConfig);
           } else if (action === 'cancel') {
             console.log('Canceling ingestion job:', { requestId, jobId });
             const cancelResult = await cancelIngestionJob(jobId);
@@ -400,19 +345,15 @@ async function handlePostRequest(
               }, sourceIp, userAgent);
             }
             
-            return createResponse(200, {
-              success: true,
+            return createSuccessResponse({
               message: 'Ingestion job cancellation initiated',
               data: cancelResult,
               requestId
-            });
+            }, 200, requestOrigin, corsConfig);
           }
         }
       }
       
-      return createResponse(404, {
-        error: 'Not Found',
-        message: `Admin action '${resource}' not found`
-      });
+      return createErrorResponse(404, `Admin action '${resource}' not found`, requestId, 'NOT_FOUND', requestOrigin, corsConfig);
   }
 }

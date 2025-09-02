@@ -67,6 +67,7 @@ interface DocumentMetadata {
   retryCount?: number;
   lastRetryDate?: string;
   ingestionJobId?: string;
+  uploadDate?: string;
 }
 
 export const handler = async (event: any, context: Context) => {
@@ -185,63 +186,88 @@ async function listAndProcessIngestionJobs(requestId: string): Promise<Ingestion
 async function updateDocumentMetadata(jobs: IngestionJobInfo[], requestId: string): Promise<number> {
   let documentsUpdated = 0;
 
-  for (const job of jobs) {
+  // Get ALL documents that need status updates (not just pending/ingesting)
+  const allDocs = await getAllDocumentsForStatusUpdate(requestId);
+  
+  console.log('Documents found for status update:', { requestId, docCount: allDocs.length });
+  
+  // Sort jobs by completion time to prioritize most recent
+  const completedJobs = jobs.filter(job => job.status === IngestionJobStatus.COMPLETE)
+    .sort((a, b) => new Date(b.completedAt || 0).getTime() - new Date(a.completedAt || 0).getTime());
+  const failedJobs = jobs.filter(job => job.status === IngestionJobStatus.FAILED)
+    .sort((a, b) => new Date(b.completedAt || 0).getTime() - new Date(a.completedAt || 0).getTime());
+  const inProgressJobs = jobs.filter(job => job.status === IngestionJobStatus.IN_PROGRESS)
+    .sort((a, b) => new Date(b.startedAt || 0).getTime() - new Date(a.startedAt || 0).getTime());
+
+  console.log('Job status summary:', { 
+    requestId, 
+    completed: completedJobs.length, 
+    failed: failedJobs.length, 
+    inProgress: inProgressJobs.length 
+  });
+
+  // Process each document individually based on the most relevant job
+  for (const doc of allDocs) {
     try {
-      // Get documents that are currently in 'pending' or 'ingesting' status
-      const pendingDocs = await getPendingDocuments(requestId);
-      
-      for (const doc of pendingDocs) {
-        let newStatus: string;
-        let updateExpression = 'SET knowledgeBaseStatus = :status, lastSyncDate = :syncDate';
-        let expressionValues: any = {
-          ':status': { S: '' },
-          ':syncDate': { S: new Date().toISOString() }
-        };
+      let targetStatus: string | null = null;
+      let targetJobId: string | null = null;
+      let shouldUpdate = false;
 
-        switch (job.status) {
-          case IngestionJobStatus.COMPLETE:
-            newStatus = 'synced';
-            updateExpression += ', ingestionJobId = :jobId';
-            expressionValues[':jobId'] = { S: job.jobId };
-            break;
-          case IngestionJobStatus.IN_PROGRESS:
-            newStatus = 'ingesting';
-            updateExpression += ', ingestionJobId = :jobId';
-            expressionValues[':jobId'] = { S: job.jobId };
-            break;
-          case IngestionJobStatus.FAILED:
-            newStatus = 'failed';
-            updateExpression += ', failureReason = :reason, retryCount = if_not_exists(retryCount, :zero) + :one';
-            expressionValues[':reason'] = { S: job.failureReasons?.join(', ') || 'Unknown error' };
-            expressionValues[':zero'] = { N: '0' };
-            expressionValues[':one'] = { N: '1' };
-            break;
-          default:
-            continue;
+      // Priority 1: If there's a recent completed job, mark as synced
+      if (completedJobs.length > 0) {
+        const latestCompletedJob = completedJobs[0];
+        const jobCompletedAt = new Date(latestCompletedJob.completedAt || 0);
+        const docUploadedAt = new Date(doc.uploadDate || '1970-01-01');
+        
+        // Update if the completed job is after the document upload or if document is not already synced
+        if (jobCompletedAt >= docUploadedAt && doc.knowledgeBaseStatus !== 'synced') {
+          targetStatus = 'synced';
+          targetJobId = latestCompletedJob.jobId;
+          shouldUpdate = true;
         }
+      }
+      // Priority 2: If there's an in-progress job and document isn't already synced, mark as ingesting
+      else if (inProgressJobs.length > 0 && doc.knowledgeBaseStatus !== 'synced') {
+        const latestInProgressJob = inProgressJobs[0];
+        targetStatus = 'ingesting';
+        targetJobId = latestInProgressJob.jobId;
+        shouldUpdate = true;
+      }
+      // Priority 3: Only mark as failed if there are ONLY failed jobs and document isn't synced
+      else if (failedJobs.length > 0 && completedJobs.length === 0 && inProgressJobs.length === 0 && doc.knowledgeBaseStatus !== 'synced') {
+        const latestFailedJob = failedJobs[0];
+        targetStatus = 'failed';
+        targetJobId = latestFailedJob.jobId;
+        shouldUpdate = true;
+      }
 
-        expressionValues[':status'].S = newStatus;
-
+      if (shouldUpdate && targetStatus && targetJobId) {
         await dynamoClient.send(new UpdateItemCommand({
           TableName: getDocumentsTable(),
           Key: {
             PK: { S: `DOC#${doc.documentId}` },
             SK: { S: 'METADATA' }
           },
-          UpdateExpression: updateExpression,
-          ExpressionAttributeValues: expressionValues
+          UpdateExpression: 'SET knowledgeBaseStatus = :status, lastSyncDate = :syncDate, ingestionJobId = :jobId',
+          ExpressionAttributeValues: {
+            ':status': { S: targetStatus },
+            ':syncDate': { S: new Date().toISOString() },
+            ':jobId': { S: targetJobId }
+          }
         }));
 
         documentsUpdated++;
         console.log('Document metadata updated:', { 
           requestId, 
           documentId: doc.documentId, 
-          newStatus, 
-          jobId: job.jobId 
+          fileName: doc.fileName,
+          oldStatus: doc.knowledgeBaseStatus,
+          newStatus: targetStatus, 
+          jobId: targetJobId 
         });
       }
     } catch (error) {
-      console.error('Error updating document metadata:', { requestId, jobId: job.jobId, error });
+      console.error('Error updating document metadata:', { requestId, documentId: doc.documentId, error });
     }
   }
 
@@ -270,6 +296,45 @@ async function getPendingDocuments(requestId: string): Promise<DocumentMetadata[
     })) || [];
   } catch (error) {
     console.error('Error getting pending documents:', { requestId, error });
+    return [];
+  }
+}
+
+async function getAllDocumentsForStatusUpdate(requestId: string): Promise<DocumentMetadata[]> {
+  try {
+    const response = await dynamoClient.send(new ScanCommand({
+      TableName: getDocumentsTable(),
+      FilterExpression: 'begins_with(PK, :docPrefix) AND SK = :metadata AND (knowledgeBaseStatus IN (:pending, :ingesting, :failed) OR attribute_not_exists(lastSyncDate))',
+      ExpressionAttributeValues: {
+        ':docPrefix': { S: 'DOC#' },
+        ':metadata': { S: 'METADATA' },
+        ':pending': { S: 'pending' },
+        ':ingesting': { S: 'ingesting' },
+        ':failed': { S: 'failed' }
+      },
+      ProjectionExpression: 'documentId, fileName, knowledgeBaseStatus, retryCount, lastRetryDate, ingestionJobId, uploadDate'
+    }));
+
+    const documents = response.Items?.map(item => ({
+      documentId: item.documentId?.S || '',
+      fileName: item.fileName?.S || '',
+      knowledgeBaseStatus: (item.knowledgeBaseStatus?.S || 'pending') as any,
+      retryCount: item.retryCount?.N ? parseInt(item.retryCount.N) : 0,
+      lastRetryDate: item.lastRetryDate?.S,
+      ingestionJobId: item.ingestionJobId?.S,
+      uploadDate: item.uploadDate?.S
+    })).filter(doc => doc.documentId && doc.fileName) || [];
+
+    console.log('Documents retrieved for status update:', { 
+      requestId, 
+      totalItems: response.Items?.length || 0,
+      validDocuments: documents.length,
+      statuses: documents.map(d => ({ id: d.documentId, status: d.knowledgeBaseStatus }))
+    });
+
+    return documents;
+  } catch (error) {
+    console.error('Error getting documents for status update:', { requestId, error });
     return [];
   }
 }

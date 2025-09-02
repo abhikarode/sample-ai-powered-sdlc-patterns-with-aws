@@ -1,5 +1,12 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
 import { BedrockService } from './bedrock-service';
+import {
+    createCORSConfigFromEnv,
+    createErrorResponse,
+    createSuccessResponse,
+    extractOriginFromEvent,
+    handleOPTIONSRequest
+} from './cors-utils';
 import { BedrockError } from './types';
 import {
     APIGatewayEventSchema,
@@ -10,79 +17,46 @@ import {
 
 const bedrockService = new BedrockService();
 
-// Security headers for all responses
-const SECURITY_HEADERS = {
-  'Access-Control-Allow-Origin': process.env.ALLOWED_ORIGINS || 'https://diaxl2ky359mj.cloudfront.net',
-  'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
-  'Access-Control-Allow-Methods': 'POST,OPTIONS',
-  'Content-Type': 'application/json',
-  'X-Content-Type-Options': 'nosniff',
-  'X-Frame-Options': 'DENY',
-  'X-XSS-Protection': '1; mode=block',
-  'Strict-Transport-Security': 'max-age=31536000; includeSubDomains'
-};
-
-// Enhanced error response function
-function createErrorResponse(
-  statusCode: number,
-  message: string,
-  requestId: string,
-  code?: string
-): APIGatewayProxyResult {
-  // Log error without sensitive information
-  console.error(`Error ${statusCode}:`, { message, code, requestId });
-  
-  return {
-    statusCode,
-    headers: SECURITY_HEADERS,
-    body: JSON.stringify({
-      error: {
-        code: code || 'INTERNAL_ERROR',
-        message,
-        requestId,
-        timestamp: new Date().toISOString()
-      }
-    })
-  };
-}
+// Create CORS configuration from environment variables
+const corsConfig = createCORSConfigFromEnv();
 
 export const handler = async (
   event: APIGatewayProxyEvent,
   context: Context
 ): Promise<APIGatewayProxyResult> => {
+  // Extract origin for CORS handling
+  const requestOrigin = extractOriginFromEvent(event);
+  
   // Log only non-sensitive request metadata
   console.log('Chat handler invoked:', {
     httpMethod: event.httpMethod,
     path: event.path,
     requestId: context.awsRequestId,
+    origin: requestOrigin,
     userAgent: event.headers?.['User-Agent']?.substring(0, 100) || 'unknown'
   });
   
   try {
     // Handle CORS preflight
     if (event.httpMethod === 'OPTIONS') {
-      return {
-        statusCode: 200,
-        headers: SECURITY_HEADERS,
-        body: ''
-      };
+      return handleOPTIONSRequest(requestOrigin, corsConfig);
     }
 
     // Validate HTTP method
     if (event.httpMethod !== 'POST') {
-      return createErrorResponse(405, 'Method not allowed', context.awsRequestId, 'METHOD_NOT_ALLOWED');
+      return createErrorResponse(405, 'Method not allowed', context.awsRequestId, 'METHOD_NOT_ALLOWED', requestOrigin, corsConfig);
     }
 
     // Validate API Gateway event structure
     try {
       APIGatewayEventSchema.parse(event);
     } catch (error) {
-      return createErrorResponse(400, 'Invalid request structure', context.awsRequestId, 'INVALID_REQUEST');
+      return createErrorResponse(400, 'Invalid request structure', context.awsRequestId, 'INVALID_REQUEST', requestOrigin, corsConfig);
     }
 
     // Validate request size
     if (event.body && event.body.length > 10000) {
-      return createErrorResponse(413, 'Request body too large', context.awsRequestId, 'PAYLOAD_TOO_LARGE');
+      return createErrorResponse(413, 'Request body too large', context.awsRequestId, 'PAYLOAD_TOO_LARGE', requestOrigin, corsConfig);
     }
     
     // Parse request body
@@ -90,7 +64,7 @@ export const handler = async (
     try {
       requestBody = JSON.parse(event.body || '{}');
     } catch (error) {
-      return createErrorResponse(400, 'Invalid JSON in request body', context.awsRequestId, 'INVALID_JSON');
+      return createErrorResponse(400, 'Invalid JSON in request body', context.awsRequestId, 'INVALID_JSON', requestOrigin, corsConfig);
     }
     
     // Validate and sanitize request
@@ -100,7 +74,7 @@ export const handler = async (
       // Additional sanitization
       chatRequest.question = sanitizeInput(chatRequest.question);
     } catch (error) {
-      return createErrorResponse(400, error instanceof Error ? error.message : 'Validation failed', context.awsRequestId, 'VALIDATION_ERROR');
+      return createErrorResponse(400, error instanceof Error ? error.message : 'Validation failed', context.awsRequestId, 'VALIDATION_ERROR', requestOrigin, corsConfig);
     }
     
     // chatRequest is already validated and sanitized above
@@ -108,20 +82,14 @@ export const handler = async (
     // Validate environment variables
     if (!process.env.KNOWLEDGE_BASE_ID) {
       console.error('KNOWLEDGE_BASE_ID environment variable is not set');
-      return {
-        statusCode: 500,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
-        },
-        body: JSON.stringify({
-          error: {
-            code: 'CONFIGURATION_ERROR',
-            message: 'Knowledge Base is not configured. Please ensure the Knowledge Base is deployed.',
-            details: 'KNOWLEDGE_BASE_ID environment variable is missing'
-          }
-        })
-      };
+      return createErrorResponse(
+        500,
+        'Knowledge Base is not configured. Please ensure the Knowledge Base is deployed.',
+        context.awsRequestId,
+        'CONFIGURATION_ERROR',
+        requestOrigin,
+        corsConfig
+      );
     }
 
     // Process chat request with advanced RAG if enabled
@@ -130,11 +98,7 @@ export const handler = async (
       ? await bedrockService.handleChatQueryWithAdvancedRAG(chatRequest)
       : await bedrockService.handleChatQuery(chatRequest);
     
-    return {
-      statusCode: 200,
-      headers: SECURITY_HEADERS,
-      body: JSON.stringify(response)
-    };
+    return createSuccessResponse(response, 200, requestOrigin, corsConfig);
     
   } catch (error) {
     const bedrockError = error as BedrockError;
@@ -148,12 +112,14 @@ export const handler = async (
       timestamp: new Date().toISOString()
     });
     
-    // Return generic error message to client
+    // Return generic error message to client with proper CORS headers
     return createErrorResponse(
       statusCode,
       bedrockError.message || 'An unexpected error occurred while processing your request',
       context.awsRequestId,
-      bedrockError.code
+      bedrockError.code,
+      requestOrigin,
+      corsConfig
     );
   }
 };

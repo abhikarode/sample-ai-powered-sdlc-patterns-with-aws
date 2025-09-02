@@ -7,6 +7,13 @@ import { BedrockAgentClient, GetIngestionJobCommand, ListIngestionJobsCommand } 
 import { DeleteItemCommand, DynamoDBClient, QueryCommand, ScanCommand } from '@aws-sdk/client-dynamodb';
 import { DeleteObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
+import {
+    createCORSConfigFromEnv,
+    createErrorResponse,
+    createSuccessResponse,
+    extractOriginFromEvent,
+    handleOPTIONSRequest
+} from './cors-utils';
 
 // AWS clients configured for us-west-2 region per steering guidelines
 const s3Client = new S3Client({ 
@@ -20,6 +27,13 @@ const dynamoClient = new DynamoDBClient({
 const bedrockClient = new BedrockAgentClient({ 
   region: 'us-west-2'
 });
+
+// Create CORS configuration from environment variables with custom methods for /documents endpoint
+const corsConfig = {
+  ...createCORSConfigFromEnv(),
+  // Include POST method since /documents endpoint supports POST via document-upload Lambda
+  allowedMethods: ['GET', 'POST', 'DELETE', 'OPTIONS']
+};
 
 // Document status types
 type DocumentStatus = 'uploading' | 'uploaded' | 'processing' | 'ready' | 'failed';
@@ -63,19 +77,44 @@ export const handler = async (
 ): Promise<APIGatewayProxyResult> => {
   const startTime = Date.now();
   const requestId = context.awsRequestId;
+  const requestOrigin = extractOriginFromEvent(event);
   
-  console.log('Document management request received:', {
+  console.log('Document management request received - VERSION 2.0:', {
     requestId,
     method: event.httpMethod,
     path: event.path,
-    pathParameters: event.pathParameters
+    origin: requestOrigin,
+    pathParameters: event.pathParameters,
+    httpMethodType: typeof event.httpMethod,
+    httpMethodValue: JSON.stringify(event.httpMethod),
+    httpMethodLength: event.httpMethod?.length,
+    httpMethodCharCodes: event.httpMethod ? Array.from(event.httpMethod).map(c => c.charCodeAt(0)) : null
   });
 
   try {
-    // Validate authorization
+    // Handle CORS preflight - OPTIONS requests should not require authentication
+    const isOptionsRequest = event.httpMethod === 'OPTIONS';
+    console.log('Checking if OPTIONS request:', { 
+      httpMethod: event.httpMethod, 
+      isOptions: isOptionsRequest,
+      requestId,
+      comparison: `'${event.httpMethod}' === 'OPTIONS'`,
+      strictEqual: event.httpMethod === 'OPTIONS',
+      trimmedEqual: event.httpMethod?.trim() === 'OPTIONS',
+      upperCaseEqual: event.httpMethod?.toUpperCase() === 'OPTIONS'
+    });
+    
+    if (isOptionsRequest) {
+      console.log('Handling OPTIONS preflight request:', { requestId, requestOrigin });
+      return handleOPTIONSRequest(requestOrigin, corsConfig);
+    }
+    
+    console.log('Not an OPTIONS request, proceeding with authorization check:', { requestId });
+
+    // Validate authorization for all non-OPTIONS requests
     if (!event.requestContext?.authorizer?.claims?.sub) {
       console.warn('Authorization failed:', { requestId });
-      return createErrorResponse(401, 'Unauthorized - missing user authentication');
+      return createErrorResponse(401, 'Unauthorized - missing user authentication', requestId, 'UNAUTHORIZED', requestOrigin, corsConfig);
     }
 
     const userId = event.requestContext.authorizer.claims.sub;
@@ -89,18 +128,18 @@ export const handler = async (
     const pathParameters = event.pathParameters;
 
     if (method === 'GET' && path === '/documents') {
-      return await handleListDocuments(userId, userRole, requestId);
+      return await handleListDocuments(userId, userRole, requestId, requestOrigin);
     } else if (method === 'DELETE' && pathParameters?.id) {
-      return await handleDeleteDocument(pathParameters.id, userId, userRole, requestId);
+      return await handleDeleteDocument(pathParameters.id, userId, userRole, requestId, requestOrigin);
     } else if (method === 'GET' && path === '/documents/status') {
-      return await handleDocumentProcessingStatus(userId, userRole, requestId);
+      return await handleDocumentProcessingStatus(userId, userRole, requestId, requestOrigin);
     } else {
-      return createErrorResponse(404, 'Endpoint not found');
+      return createErrorResponse(404, 'Endpoint not found', requestId, 'NOT_FOUND', requestOrigin, corsConfig);
     }
 
   } catch (error) {
     console.error('Document management error:', { requestId, error });
-    return createErrorResponse(500, 'Internal server error during document management');
+    return createErrorResponse(500, 'Internal server error during document management', requestId, 'INTERNAL_ERROR', requestOrigin, corsConfig);
   }
 };
 
@@ -111,7 +150,8 @@ export const handler = async (
 async function handleListDocuments(
   userId: string, 
   userRole: string, 
-  requestId: string
+  requestId: string,
+  requestOrigin?: string
 ): Promise<APIGatewayProxyResult> {
   try {
     console.log('Listing documents for user:', { requestId, userId, userRole });
@@ -137,24 +177,17 @@ async function handleListDocuments(
       processingTime: `${processingTime}ms`
     });
 
-    return {
-      statusCode: 200,
-      headers: getCorsHeaders(),
-      body: JSON.stringify({
-        success: true,
-        data: {
-          documents: enrichedDocuments,
-          totalCount: enrichedDocuments.length,
-          userRole,
-          timestamp: new Date().toISOString(),
-          processingTime: `${processingTime}ms`
-        }
-      })
-    };
+    return createSuccessResponse({
+      documents: enrichedDocuments,
+      totalCount: enrichedDocuments.length,
+      userRole,
+      timestamp: new Date().toISOString(),
+      processingTime: `${processingTime}ms`
+    }, 200, requestOrigin, corsConfig);
 
   } catch (error) {
     console.error('Error listing documents:', { requestId, error });
-    return createErrorResponse(500, 'Failed to retrieve documents');
+    return createErrorResponse(500, 'Failed to retrieve documents', requestId, 'RETRIEVAL_ERROR', requestOrigin, corsConfig);
   }
 }
 
@@ -166,7 +199,8 @@ async function handleDeleteDocument(
   documentId: string,
   userId: string,
   userRole: string,
-  requestId: string
+  requestId: string,
+  requestOrigin?: string
 ): Promise<APIGatewayProxyResult> {
   try {
     console.log('Deleting document:', { requestId, documentId, userId, userRole });
@@ -175,7 +209,7 @@ async function handleDeleteDocument(
     const document = await getDocumentById(documentId, requestId);
     
     if (!document) {
-      return createErrorResponse(404, 'Document not found');
+      return createErrorResponse(404, 'Document not found', requestId, 'NOT_FOUND', requestOrigin, corsConfig);
     }
 
     // Check permissions - users can only delete their own documents, admins can delete any
@@ -186,7 +220,7 @@ async function handleDeleteDocument(
         documentOwner: document.uploadedBy, 
         requestingUser: userId 
       });
-      return createErrorResponse(403, 'Permission denied - you can only delete your own documents');
+      return createErrorResponse(403, 'Permission denied - you can only delete your own documents', requestId, 'FORBIDDEN', requestOrigin, corsConfig);
     }
 
     // Delete from S3 first
@@ -198,7 +232,7 @@ async function handleDeleteDocument(
       console.log('Document deleted from S3:', { requestId, documentId, s3Key: document.s3Key });
     } catch (s3Error) {
       console.error('S3 deletion failed:', { requestId, documentId, error: s3Error });
-      return createErrorResponse(500, 'Failed to delete document from storage');
+      return createErrorResponse(500, 'Failed to delete document from storage', requestId, 'S3_ERROR', requestOrigin, corsConfig);
     }
 
     // Delete metadata from DynamoDB
@@ -213,7 +247,7 @@ async function handleDeleteDocument(
       console.log('Document metadata deleted from DynamoDB:', { requestId, documentId });
     } catch (dynamoError) {
       console.error('DynamoDB deletion failed:', { requestId, documentId, error: dynamoError });
-      return createErrorResponse(500, 'Failed to delete document metadata');
+      return createErrorResponse(500, 'Failed to delete document metadata', requestId, 'DYNAMODB_ERROR', requestOrigin, corsConfig);
     }
 
     // Note: Knowledge Base cleanup happens automatically during next sync
@@ -227,25 +261,18 @@ async function handleDeleteDocument(
       processingTime: `${processingTime}ms`
     });
 
-    return {
-      statusCode: 200,
-      headers: getCorsHeaders(),
-      body: JSON.stringify({
-        success: true,
-        data: {
-          message: 'Document deleted successfully',
-          documentId,
-          fileName: document.fileName,
-          knowledgeBaseCleanup: 'Will be removed from Knowledge Base during next sync',
-          timestamp: new Date().toISOString(),
-          processingTime: `${processingTime}ms`
-        }
-      })
-    };
+    return createSuccessResponse({
+      message: 'Document deleted successfully',
+      documentId,
+      fileName: document.fileName,
+      knowledgeBaseCleanup: 'Will be removed from Knowledge Base during next sync',
+      timestamp: new Date().toISOString(),
+      processingTime: `${processingTime}ms`
+    }, 200, requestOrigin, corsConfig);
 
   } catch (error) {
     console.error('Error deleting document:', { requestId, documentId, error });
-    return createErrorResponse(500, 'Failed to delete document');
+    return createErrorResponse(500, 'Failed to delete document', requestId, 'DELETE_ERROR', requestOrigin, corsConfig);
   }
 }
 
@@ -256,7 +283,8 @@ async function handleDeleteDocument(
 async function handleDocumentProcessingStatus(
   userId: string,
   userRole: string,
-  requestId: string
+  requestId: string,
+  requestOrigin?: string
 ): Promise<APIGatewayProxyResult> {
   try {
     console.log('Getting document processing status:', { requestId, userId, userRole });
@@ -300,25 +328,18 @@ async function handleDocumentProcessingStatus(
       processingTime: `${processingTime}ms`
     });
 
-    return {
-      statusCode: 200,
-      headers: getCorsHeaders(),
-      body: JSON.stringify({
-        success: true,
-        data: {
-          statusSummary,
-          processingDocuments,
-          ingestionJobs,
-          userRole,
-          timestamp: new Date().toISOString(),
-          processingTime: `${processingTime}ms`
-        }
-      })
-    };
+    return createSuccessResponse({
+      statusSummary,
+      processingDocuments,
+      ingestionJobs,
+      userRole,
+      timestamp: new Date().toISOString(),
+      processingTime: `${processingTime}ms`
+    }, 200, requestOrigin, corsConfig);
 
   } catch (error) {
     console.error('Error getting document processing status:', { requestId, error });
-    return createErrorResponse(500, 'Failed to retrieve document processing status');
+    return createErrorResponse(500, 'Failed to retrieve document processing status', requestId, 'STATUS_ERROR', requestOrigin, corsConfig);
   }
 }
 
@@ -496,25 +517,3 @@ function mapDynamoItemToDocument(item: any): DocumentRecord | null {
   };
 }
 
-function createErrorResponse(statusCode: number, message: string): APIGatewayProxyResult {
-  return {
-    statusCode,
-    headers: getCorsHeaders(),
-    body: JSON.stringify({
-      success: false,
-      error: {
-        message: message,
-        timestamp: new Date().toISOString()
-      }
-    })
-  };
-}
-
-function getCorsHeaders() {
-  return {
-    'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-    'Access-Control-Allow-Methods': 'GET,DELETE,OPTIONS'
-  };
-}
