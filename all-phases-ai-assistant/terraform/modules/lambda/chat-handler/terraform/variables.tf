@@ -1,4 +1,19 @@
-# Variables for Chat Handler Lambda Function
+/*
+ * ============================================================================
+ * WARNING: DOCUMENTATION ONLY - DO NOT USE FOR DEPLOYMENT
+ * ============================================================================
+ * 
+ * This Terraform configuration is for documentation purposes only.
+ * It reflects the current state of AWS infrastructure deployed via AWS CLI.
+ * 
+ * DO NOT RUN: terraform plan, terraform apply, or terraform destroy
+ * 
+ * For deployments, use AWS CLI commands as specified in deployment-workflow.md
+ * ============================================================================
+ */
+
+# Variables for Chat Handler Lambda Function (DOCUMENTATION ONLY)
+# ACTUAL DEPLOYED FUNCTION: ai-assistant-chat-endpoints
 
 variable "environment" {
   description = "Environment name (development, staging, production)"
@@ -77,5 +92,10 @@ variable "documents_table_name" {
 
 variable "documents_table_arn" {
   description = "ARN of the DynamoDB table for documents and conversations"
+  type        = string
+}
+
+variable "cloudfront_url" {
+  description = "CloudFront distribution URL for CORS configuration"
   type        = string
 }

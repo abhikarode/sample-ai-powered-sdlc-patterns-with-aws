@@ -11,7 +11,7 @@ import {
     StartIngestionJobCommand,
     StartIngestionJobCommandOutput
 } from '@aws-sdk/client-bedrock-agent';
-import { CloudWatchClient, GetMetricStatisticsCommand, GetMetricStatisticsCommandOutput, PutMetricDataCommand } from '@aws-sdk/client-cloudwatch';
+import { CloudWatchClient, GetMetricStatisticsCommand, GetMetricStatisticsCommandOutput, PutMetricDataCommand, StandardUnit } from '@aws-sdk/client-cloudwatch';
 import { CloudWatchLogsClient, CreateLogStreamCommand, PutLogEventsCommand } from '@aws-sdk/client-cloudwatch-logs';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, ScanCommand, ScanCommandOutput } from '@aws-sdk/lib-dynamodb';
@@ -573,7 +573,7 @@ export async function logAdminAction(
         {
           MetricName: 'AdminActions',
           Value: 1,
-          Unit: 'Count',
+          Unit: StandardUnit.Count,
           Timestamp: new Date(),
           Dimensions: [
             {
@@ -652,7 +652,7 @@ export async function logKnowledgeBaseMetrics(
         {
           MetricName: 'OperationDuration',
           Value: duration,
-          Unit: 'Milliseconds',
+          Unit: StandardUnit.Milliseconds,
           Timestamp: new Date(),
           Dimensions: [
             {
@@ -664,7 +664,7 @@ export async function logKnowledgeBaseMetrics(
         {
           MetricName: 'OperationSuccess',
           Value: success ? 1 : 0,
-          Unit: 'Count',
+          Unit: StandardUnit.Count,
           Timestamp: new Date(),
           Dimensions: [
             {
@@ -696,11 +696,11 @@ export async function trackIngestionJobMetrics(
   errorDetails?: any
 ): Promise<void> {
   try {
-    const metricData = [
+    const metricData: any[] = [
       {
         MetricName: 'IngestionJobsTotal',
         Value: 1,
-        Unit: 'Count',
+        Unit: StandardUnit.Count,
         Timestamp: new Date(),
         Dimensions: [
           { Name: 'Operation', Value: operation },
@@ -716,14 +716,14 @@ export async function trackIngestionJobMetrics(
           {
             MetricName: 'IngestionJobsCompleted',
             Value: 1,
-            Unit: 'Count',
+            Unit: StandardUnit.Count,
             Timestamp: new Date(),
             Dimensions: [{ Name: 'KnowledgeBaseId', Value: process.env.KNOWLEDGE_BASE_ID || 'unknown' }]
           },
           {
             MetricName: 'IngestionJobSuccessRate',
             Value: 100,
-            Unit: 'Percent',
+            Unit: StandardUnit.Percent,
             Timestamp: new Date(),
             Dimensions: [{ Name: 'KnowledgeBaseId', Value: process.env.KNOWLEDGE_BASE_ID || 'unknown' }]
           }
@@ -733,7 +733,7 @@ export async function trackIngestionJobMetrics(
           metricData.push({
             MetricName: 'IngestionJobDuration',
             Value: duration,
-            Unit: 'Milliseconds',
+            Unit: StandardUnit.Milliseconds,
             Timestamp: new Date(),
             Dimensions: [{ Name: 'KnowledgeBaseId', Value: process.env.KNOWLEDGE_BASE_ID || 'unknown' }]
           });
@@ -743,7 +743,7 @@ export async function trackIngestionJobMetrics(
           metricData.push({
             MetricName: 'DocumentsProcessed',
             Value: documentsProcessed,
-            Unit: 'Count',
+            Unit: StandardUnit.Count,
             Timestamp: new Date(),
             Dimensions: [{ Name: 'JobId', Value: jobId }]
           });
@@ -755,21 +755,21 @@ export async function trackIngestionJobMetrics(
           {
             MetricName: 'IngestionJobsFailed',
             Value: 1,
-            Unit: 'Count',
+            Unit: StandardUnit.Count,
             Timestamp: new Date(),
             Dimensions: [{ Name: 'KnowledgeBaseId', Value: process.env.KNOWLEDGE_BASE_ID || 'unknown' }]
           },
           {
             MetricName: 'DocumentProcessingErrors',
             Value: 1,
-            Unit: 'Count',
+            Unit: StandardUnit.Count,
             Timestamp: new Date(),
             Dimensions: [{ Name: 'KnowledgeBaseId', Value: process.env.KNOWLEDGE_BASE_ID || 'unknown' }]
           },
           {
             MetricName: 'IngestionJobSuccessRate',
             Value: 0,
-            Unit: 'Percent',
+            Unit: StandardUnit.Percent,
             Timestamp: new Date(),
             Dimensions: [{ Name: 'KnowledgeBaseId', Value: process.env.KNOWLEDGE_BASE_ID || 'unknown' }]
           }
@@ -780,7 +780,7 @@ export async function trackIngestionJobMetrics(
         metricData.push({
           MetricName: 'IngestionJobsInProgress',
           Value: 1,
-          Unit: 'Count',
+          Unit: StandardUnit.Count,
           Timestamp: new Date(),
           Dimensions: [{ Name: 'KnowledgeBaseId', Value: process.env.KNOWLEDGE_BASE_ID || 'unknown' }]
         });
@@ -790,7 +790,7 @@ export async function trackIngestionJobMetrics(
         metricData.push({
           MetricName: 'IngestionJobsCancelled',
           Value: 1,
-          Unit: 'Count',
+          Unit: StandardUnit.Count,
           Timestamp: new Date(),
           Dimensions: [{ Name: 'KnowledgeBaseId', Value: process.env.KNOWLEDGE_BASE_ID || 'unknown' }]
         });

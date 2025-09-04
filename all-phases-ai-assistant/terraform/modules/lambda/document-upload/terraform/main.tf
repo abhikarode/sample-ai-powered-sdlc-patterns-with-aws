@@ -1,4 +1,20 @@
-# Document Upload Lambda Function Terraform Configuration
+/*
+ * ============================================================================
+ * WARNING: DOCUMENTATION ONLY - DO NOT USE FOR DEPLOYMENT
+ * ============================================================================
+ * 
+ * This Terraform configuration is for documentation purposes only.
+ * It reflects the current state of AWS infrastructure deployed via AWS CLI.
+ * 
+ * DO NOT RUN: terraform plan, terraform apply, or terraform destroy
+ * 
+ * For deployments, use AWS CLI commands as specified in deployment-workflow.md
+ * ============================================================================
+ */
+
+# Document Upload Lambda Function Terraform Configuration (DOCUMENTATION ONLY)
+# ACTUAL DEPLOYED FUNCTION: ai-assistant-dev-document-upload (nodejs18.x)
+# ACTUAL IAM ROLE: ai-assistant-lambda-document-execution-role
 
 # Create a proper Lambda package structure
 resource "null_resource" "create_lambda_package" {
@@ -40,11 +56,13 @@ resource "null_resource" "build_lambda" {
   }
 }
 
-# Lambda function
+# Lambda function (DOCUMENTATION ONLY)
+# ACTUAL DEPLOYED FUNCTION: ai-assistant-dev-document-upload
+# ACTUAL ROLE: arn:aws:iam::254539707041:role/ai-assistant-lambda-document-execution-role
 resource "aws_lambda_function" "document_upload" {
   filename         = data.archive_file.document_upload_lambda.output_path
-  function_name    = "${var.project_name}-${var.environment}-document-upload"
-  role            = var.lambda_execution_role_arn
+  function_name    = "ai-assistant-dev-document-upload"
+  role            = "arn:aws:iam::254539707041:role/ai-assistant-lambda-document-execution-role"
   handler         = "index.handler"
   runtime         = "nodejs18.x"
   timeout         = 30
@@ -73,9 +91,10 @@ resource "aws_lambda_function" "document_upload" {
   ]
 }
 
-# CloudWatch Log Group
+# CloudWatch Log Group (DOCUMENTATION ONLY)
+# ACTUAL LOG GROUP: /aws/lambda/ai-assistant-dev-document-upload (retention: 14 days)
 resource "aws_cloudwatch_log_group" "document_upload_logs" {
-  name              = "/aws/lambda/${aws_lambda_function.document_upload.function_name}"
+  name              = "/aws/lambda/ai-assistant-dev-document-upload"
   retention_in_days = 14
 
   tags = var.tags

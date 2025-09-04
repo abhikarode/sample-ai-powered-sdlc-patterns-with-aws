@@ -1,5 +1,20 @@
-# Admin Management Lambda Function Terraform Configuration
-# Handles Knowledge Base administration endpoints
+/*
+ * ============================================================================
+ * WARNING: DOCUMENTATION ONLY - DO NOT USE FOR DEPLOYMENT
+ * ============================================================================
+ * 
+ * This Terraform configuration is for documentation purposes only.
+ * It reflects the current state of AWS infrastructure deployed via AWS CLI.
+ * 
+ * DO NOT RUN: terraform plan, terraform apply, or terraform destroy
+ * 
+ * For deployments, use AWS CLI commands as specified in deployment-workflow.md
+ * ============================================================================
+ */
+
+# Admin Management Lambda Function Terraform Configuration (DOCUMENTATION ONLY)
+# ACTUAL DEPLOYED FUNCTION: ai-assistant-dev-admin-management (nodejs18.x)
+# ACTUAL IAM ROLE: ai-assistant-lambda-admin-execution-role
 
 terraform {
   required_providers {
@@ -31,11 +46,13 @@ resource "null_resource" "build_lambda" {
   }
 }
 
-# Lambda function for admin management
+# Lambda function for admin management (DOCUMENTATION ONLY)
+# ACTUAL DEPLOYED FUNCTION: ai-assistant-dev-admin-management
+# ACTUAL ROLE: arn:aws:iam::254539707041:role/ai-assistant-lambda-admin-execution-role
 resource "aws_lambda_function" "admin_management" {
   filename         = "${path.module}/../function.zip"
-  function_name    = "${var.project_name}-${var.environment}-admin-management"
-  role            = var.lambda_execution_role_arn
+  function_name    = "ai-assistant-dev-admin-management"
+  role            = "arn:aws:iam::254539707041:role/ai-assistant-lambda-admin-execution-role"
   handler         = "dist/index.handler"
   runtime         = "nodejs18.x"
   timeout         = 30
@@ -61,9 +78,10 @@ resource "aws_lambda_function" "admin_management" {
   })
 }
 
-# CloudWatch Log Group for Lambda function
+# CloudWatch Log Group for Lambda function (DOCUMENTATION ONLY)
+# ACTUAL LOG GROUP: /aws/lambda/ai-assistant-dev-admin-management (retention: 14 days)
 resource "aws_cloudwatch_log_group" "admin_management_logs" {
-  name              = "/aws/lambda/${aws_lambda_function.admin_management.function_name}"
+  name              = "/aws/lambda/ai-assistant-dev-admin-management"
   retention_in_days = 14
 
   tags = merge(var.tags, {

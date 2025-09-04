@@ -1,4 +1,20 @@
-# Knowledge Base Sync Monitor Lambda Function Terraform Module
+/*
+ * ============================================================================
+ * WARNING: DOCUMENTATION ONLY - DO NOT USE FOR DEPLOYMENT
+ * ============================================================================
+ * 
+ * This Terraform configuration is for documentation purposes only.
+ * It reflects the current state of AWS infrastructure deployed via AWS CLI.
+ * 
+ * DO NOT RUN: terraform plan, terraform apply, or terraform destroy
+ * 
+ * For deployments, use AWS CLI commands as specified in deployment-workflow.md
+ * ============================================================================
+ */
+
+# Knowledge Base Sync Monitor Lambda Function Terraform Module (DOCUMENTATION ONLY)
+# ACTUAL DEPLOYED FUNCTION: ai-assistant-dev-kb-sync-monitor (nodejs18.x)
+# ACTUAL IAM ROLE: ai-assistant-lambda-kb-monitor-execution-role
 
 # Build the Lambda function
 resource "null_resource" "build_function" {
@@ -12,11 +28,13 @@ resource "null_resource" "build_function" {
   }
 }
 
-# Lambda function for Knowledge Base sync monitoring
+# Lambda function for Knowledge Base sync monitoring (DOCUMENTATION ONLY)
+# ACTUAL DEPLOYED FUNCTION: ai-assistant-dev-kb-sync-monitor
+# ACTUAL ROLE: arn:aws:iam::254539707041:role/ai-assistant-lambda-kb-monitor-execution-role
 resource "aws_lambda_function" "kb_sync_monitor" {
   filename         = "${path.module}/../function.zip"
-  function_name    = "${var.project_name}-${var.environment}-kb-sync-monitor"
-  role            = var.lambda_execution_role_arn
+  function_name    = "ai-assistant-dev-kb-sync-monitor"
+  role            = "arn:aws:iam::254539707041:role/ai-assistant-lambda-kb-monitor-execution-role"
   handler         = "dist/index.handler"
   runtime         = "nodejs18.x"
   timeout         = 300 # 5 minutes
@@ -39,9 +57,10 @@ resource "aws_lambda_function" "kb_sync_monitor" {
   })
 }
 
-# CloudWatch Log Group for the Lambda function
+# CloudWatch Log Group for the Lambda function (DOCUMENTATION ONLY)
+# ACTUAL LOG GROUP: /aws/lambda/ai-assistant-dev-kb-sync-monitor (retention: 14 days)
 resource "aws_cloudwatch_log_group" "kb_sync_monitor_logs" {
-  name              = "/aws/lambda/${aws_lambda_function.kb_sync_monitor.function_name}"
+  name              = "/aws/lambda/ai-assistant-dev-kb-sync-monitor"
   retention_in_days = 14
 
   tags = merge(var.tags, {
@@ -49,9 +68,10 @@ resource "aws_cloudwatch_log_group" "kb_sync_monitor_logs" {
   })
 }
 
-# EventBridge rule to trigger the monitoring function every 5 minutes
+# EventBridge rule to trigger the monitoring function every 5 minutes (DOCUMENTATION ONLY)
+# ACTUAL RULE: ai-assistant-dev-kb-sync-monitor-schedule (rate(5 minutes))
 resource "aws_cloudwatch_event_rule" "kb_sync_monitor_schedule" {
-  name                = "${var.project_name}-${var.environment}-kb-sync-monitor-schedule"
+  name                = "ai-assistant-dev-kb-sync-monitor-schedule"
   description         = "Trigger Knowledge Base sync monitoring every 5 minutes"
   schedule_expression = "rate(5 minutes)"
 

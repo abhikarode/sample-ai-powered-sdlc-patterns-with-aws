@@ -1,5 +1,20 @@
-# API Gateway integration for Chat Handler Lambda
-# This file creates the API Gateway resources for chat endpoints
+/*
+ * ============================================================================
+ * WARNING: DOCUMENTATION ONLY - DO NOT USE FOR DEPLOYMENT
+ * ============================================================================
+ * 
+ * This Terraform configuration is for documentation purposes only.
+ * It reflects the current state of AWS infrastructure deployed via AWS CLI.
+ * 
+ * DO NOT RUN: terraform plan, terraform apply, or terraform destroy
+ * 
+ * For deployments, use AWS CLI commands as specified in deployment-workflow.md
+ * ============================================================================
+ */
+
+# API Gateway integration for Chat Handler Lambda (DOCUMENTATION ONLY)
+# This file documents the API Gateway resources for chat endpoints
+# ACTUAL API GATEWAY: jpt8wzkowd (ai-assistant-api)
 
 # /chat/ask resource
 resource "aws_api_gateway_resource" "chat_ask" {
@@ -31,7 +46,7 @@ resource "aws_api_gateway_integration" "chat_ask_post" {
 
   integration_http_method = "POST"
   type                   = "AWS_PROXY"
-  uri                    = aws_lambda_function.chat_endpoints.invoke_arn
+  uri                    = aws_lambda_function.chat_handler.invoke_arn
   
   # Set timeout to maximum allowed (29 seconds)
   timeout_milliseconds = 29000
@@ -88,7 +103,7 @@ resource "aws_api_gateway_integration" "chat_stream_post" {
 
   integration_http_method = "POST"
   type                   = "AWS_PROXY"
-  uri                    = aws_lambda_function.chat_endpoints.invoke_arn
+  uri                    = aws_lambda_function.chat_handler.invoke_arn
 }
 
 # OPTIONS /chat/stream method for CORS preflight
@@ -140,7 +155,7 @@ resource "aws_api_gateway_integration" "chat_conversations_get" {
 
   integration_http_method = "POST"
   type                   = "AWS_PROXY"
-  uri                    = aws_lambda_function.chat_endpoints.invoke_arn
+  uri                    = aws_lambda_function.chat_handler.invoke_arn
 }
 
 # /chat/conversations/{conversationId} resource
@@ -171,7 +186,7 @@ resource "aws_api_gateway_integration" "chat_conversation_delete" {
 
   integration_http_method = "POST"
   type                   = "AWS_PROXY"
-  uri                    = aws_lambda_function.chat_endpoints.invoke_arn
+  uri                    = aws_lambda_function.chat_handler.invoke_arn
 }
 
 # /chat/history/{conversationId} resource
@@ -209,7 +224,7 @@ resource "aws_api_gateway_integration" "chat_history_get" {
 
   integration_http_method = "POST"
   type                   = "AWS_PROXY"
-  uri                    = aws_lambda_function.chat_endpoints.invoke_arn
+  uri                    = aws_lambda_function.chat_handler.invoke_arn
 }
 
 # Request validator for chat endpoints
@@ -264,107 +279,18 @@ resource "aws_api_gateway_model" "chat_request" {
   })
 }
 
-# Lambda permissions for API Gateway
+# Lambda permissions for API Gateway (DOCUMENTATION ONLY)
 resource "aws_lambda_permission" "chat_ask_api_gateway" {
   statement_id  = "AllowExecutionFromAPIGateway-${var.project_name}-chat-ask"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.chat_endpoints.function_name
+  function_name = aws_lambda_function.chat_handler.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${var.api_gateway_execution_arn}/*/*"
 }
 
-# Create separate Lambda function for chat endpoints
-resource "aws_lambda_function" "chat_endpoints" {
-  filename         = data.archive_file.chat_endpoints.output_path
-  function_name    = "${var.project_name}-chat-endpoints"
-  role             = aws_iam_role.chat_handler_role.arn
-  handler          = "chat-endpoints.handler"
-  source_code_hash = data.archive_file.chat_endpoints.output_base64sha256
-
-  runtime     = "nodejs20.x"
-  memory_size = 1024
-  timeout     = 900  # 15 minutes for streaming responses
-
-  environment {
-    variables = {
-      ENVIRONMENT         = var.environment
-      KNOWLEDGE_BASE_ID   = var.knowledge_base_id
-      DOCUMENTS_TABLE     = var.documents_table_name
-      LOG_LEVEL           = var.log_level
-      ENABLE_ADVANCED_RAG = var.enable_advanced_rag
-      AWS_ACCOUNT_ID      = data.aws_caller_identity.current.account_id
-    }
-  }
-
-  # Advanced logging configuration
-  logging_config {
-    log_format            = "JSON"
-    application_log_level = "INFO"
-    system_log_level      = "WARN"
-    log_group             = aws_cloudwatch_log_group.chat_endpoints.name
-  }
-
-  # Enable X-Ray tracing
-  tracing_config {
-    mode = "Active"
-  }
-
-  tags = {
-    Environment = var.environment
-    Application = "ai-assistant"
-    Component   = "chat-endpoints"
-  }
-
-  depends_on = [
-    aws_iam_role_policy_attachment.chat_handler_logs,
-    aws_iam_role_policy_attachment.chat_handler_bedrock,
-    aws_iam_role_policy_attachment.chat_handler_cloudwatch,
-    aws_iam_role_policy_attachment.chat_handler_dynamodb,
-    aws_cloudwatch_log_group.chat_endpoints,
-    data.archive_file.chat_endpoints
-  ]
-}
-
-# Package the chat endpoints Lambda function code
-data "archive_file" "chat_endpoints" {
-  type        = "zip"
-  output_path = "${path.module}/../chat-endpoints.zip"
-  source_dir  = "${path.module}/../"
-  depends_on  = [null_resource.build_lambda]
-  
-  excludes = [
-    "src",
-    "terraform",
-    "tsconfig.json",
-    "*.ts",
-    "node_modules/@types",
-    "node_modules/typescript",
-    "node_modules/.bin",
-    "*.md",
-    ".git*"
-  ]
-}
-
-# CloudWatch Log Group for chat endpoints Lambda
-resource "aws_cloudwatch_log_group" "chat_endpoints" {
-  name              = "/aws/lambda/${var.project_name}-chat-endpoints"
-  retention_in_days = 14
-
-  tags = {
-    Environment = var.environment
-    Application = "ai-assistant"
-    Component   = "chat-endpoints"
-  }
-}
-
-# Lambda permissions for chat endpoints API Gateway
-resource "aws_lambda_permission" "chat_endpoints_api_gateway" {
-  statement_id  = "AllowExecutionFromAPIGateway-${var.project_name}-chat-endpoints"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.chat_endpoints.function_name
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${var.api_gateway_execution_arn}/*/*"
-}
+# Lambda function reference (DOCUMENTATION ONLY)
+# ACTUAL DEPLOYED FUNCTION: ai-assistant-chat-endpoints
+# This references the Lambda function defined in main.tf
 
 # DynamoDB permissions for conversation management
 resource "aws_iam_policy" "chat_handler_dynamodb" {

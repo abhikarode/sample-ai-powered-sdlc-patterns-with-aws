@@ -1,5 +1,20 @@
-# Document Management Lambda Function Terraform Module
-# GREEN Phase: Minimal implementation to pass validation tests
+/*
+ * ============================================================================
+ * WARNING: DOCUMENTATION ONLY - DO NOT USE FOR DEPLOYMENT
+ * ============================================================================
+ * 
+ * This Terraform configuration is for documentation purposes only.
+ * It reflects the current state of AWS infrastructure deployed via AWS CLI.
+ * 
+ * DO NOT RUN: terraform plan, terraform apply, or terraform destroy
+ * 
+ * For deployments, use AWS CLI commands as specified in deployment-workflow.md
+ * ============================================================================
+ */
+
+# Document Management Lambda Function Terraform Module (DOCUMENTATION ONLY)
+# ACTUAL DEPLOYED FUNCTION: ai-assistant-dev-document-management (nodejs20.x)
+# ACTUAL IAM ROLE: ai-assistant-lambda-document-execution-role
 
 # Data source for current AWS caller identity
 data "aws_caller_identity" "current" {}
@@ -25,11 +40,13 @@ resource "null_resource" "build_lambda" {
   }
 }
 
-# Lambda function for document management
+# Lambda function for document management (DOCUMENTATION ONLY)
+# ACTUAL DEPLOYED FUNCTION: ai-assistant-dev-document-management
+# ACTUAL ROLE: arn:aws:iam::254539707041:role/ai-assistant-lambda-document-execution-role
 resource "aws_lambda_function" "document_management" {
   filename         = data.archive_file.document_management_lambda.output_path
-  function_name    = "${var.project_name}-${var.environment}-document-management"
-  role            = var.lambda_execution_role_arn
+  function_name    = "ai-assistant-dev-document-management"
+  role            = "arn:aws:iam::254539707041:role/ai-assistant-lambda-document-execution-role"
   handler         = "index.handler"
   runtime         = "nodejs20.x"
   timeout         = 30
@@ -63,9 +80,10 @@ resource "aws_lambda_function" "document_management" {
   ]
 }
 
-# CloudWatch Log Group for Lambda function
+# CloudWatch Log Group for Lambda function (DOCUMENTATION ONLY)
+# ACTUAL LOG GROUP: /aws/lambda/ai-assistant-dev-document-management (retention: 14 days)
 resource "aws_cloudwatch_log_group" "document_management_logs" {
-  name              = "/aws/lambda/${aws_lambda_function.document_management.function_name}"
+  name              = "/aws/lambda/ai-assistant-dev-document-management"
   retention_in_days = 14
 
   tags = var.tags

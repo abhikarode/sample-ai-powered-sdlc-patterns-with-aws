@@ -1,92 +1,74 @@
+/*
+ * ============================================================================
+ * WARNING: DOCUMENTATION ONLY - DO NOT USE FOR DEPLOYMENT
+ * ============================================================================
+ * 
+ * This Terraform configuration is for documentation purposes only.
+ * It reflects the current state of AWS infrastructure deployed via AWS CLI.
+ * 
+ * DO NOT RUN: terraform plan, terraform apply, or terraform destroy
+ * 
+ * For deployments, use AWS CLI commands as specified in deployment-workflow.md
+ * ============================================================================
+ */
+
 # Main Terraform configuration for AI Assistant infrastructure
-# GREEN Phase: Minimal implementation to pass validation tests
+# DOCUMENTATION ONLY - Reflects actual deployed AWS resources
 
-# Random suffix for unique resource names
-resource "random_id" "suffix" {
-  byte_length = 4
-}
-
-# S3 bucket for documents (Knowledge Base data source)
-resource "aws_s3_bucket" "documents" {
-  bucket = "${var.project_name}-${var.environment}-${var.documents_bucket_name}-${random_id.suffix.hex}"
+# Local values reflecting actual deployed resource identifiers
+locals {
+  project_name = "ai-assistant"
+  environment  = "dev"
+  region      = "us-west-2"
+  account_id  = "254539707041"
   
-  tags = merge(var.additional_tags, {
-    Name        = "${var.project_name}-${var.environment}-documents"
-    Purpose     = "Knowledge Base Data Source"
-    Environment = var.environment
-  })
-}
-
-# S3 bucket versioning
-resource "aws_s3_bucket_versioning" "documents" {
-  bucket = aws_s3_bucket.documents.id
-  versioning_configuration {
-    status = "Enabled"
+  # Actual deployed resource IDs (DOCUMENTATION ONLY)
+  api_gateway_id           = "jpt8wzkowd"
+  user_pool_id            = "us-west-2_FLJTm8Xt8"
+  user_pool_client_id     = "3gr32ei5n768d88h02klhmpn8v"
+  cloudfront_distribution_id = "EL8L41G6CQJCD"
+  cloudfront_domain       = "dq9tlzfsf1veq.cloudfront.net"
+  knowledge_base_id       = "PQB7MB5ORO"
+  data_source_id          = "YUAUID9BJN"
+  
+  # Actual S3 bucket names
+  documents_bucket_name   = "ai-assistant-dev-documents-993738bb"
+  frontend_bucket_name    = "ai-assistant-dev-frontend-e5e9acfe"
+  
+  # Actual DynamoDB table name
+  documents_table_name    = "ai-assistant-dev-documents"
+  
+  # Actual Lambda function names
+  lambda_functions = {
+    chat_endpoints      = "ai-assistant-chat-endpoints"
+    document_management = "ai-assistant-dev-document-management"
+    admin_management    = "ai-assistant-dev-admin-management"
+    document_upload     = "ai-assistant-dev-document-upload"
+    kb_sync_monitor     = "ai-assistant-dev-kb-sync-monitor"
+    monitoring_metrics  = "ai-assistant-monitoring-metrics"
   }
 }
 
-# S3 bucket server-side encryption
-resource "aws_s3_bucket_server_side_encryption_configuration" "documents" {
-  bucket = aws_s3_bucket.documents.id
+# S3 Storage Module
+# DOCUMENTATION ONLY - Reflects actual deployed S3 buckets
+module "s3" {
+  source = "./modules/s3"
   
-  rule {
-    apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
-    }
-    bucket_key_enabled = true
-  }
-}
-
-# S3 bucket public access block
-resource "aws_s3_bucket_public_access_block" "documents" {
-  bucket = aws_s3_bucket.documents.id
+  project_name                 = local.project_name
+  environment                  = local.environment
+  documents_bucket_name        = local.documents_bucket_name
+  frontend_bucket_name         = local.frontend_bucket_name
+  cloudfront_distribution_arn  = "arn:aws:cloudfront::${local.account_id}:distribution/${local.cloudfront_distribution_id}"
+  cloudfront_domain           = local.cloudfront_domain
+  api_gateway_domain          = "${local.api_gateway_id}.execute-api.${local.region}.amazonaws.com"
   
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
-}
-
-# S3 bucket lifecycle configuration
-resource "aws_s3_bucket_lifecycle_configuration" "documents" {
-  bucket = aws_s3_bucket.documents.id
-  
-  rule {
-    id     = "document_lifecycle"
-    status = "Enabled"
-    
-    # Apply to all objects
-    filter {
-      prefix = ""
-    }
-    
-    # Abort incomplete multipart uploads after 7 days
-    abort_incomplete_multipart_upload {
-      days_after_initiation = 7
-    }
-    
-    # Move to IA after 30 days
-    transition {
-      days          = 30
-      storage_class = "STANDARD_IA"
-    }
-    
-    # Move to Glacier after 90 days
-    transition {
-      days          = 90
-      storage_class = "GLACIER"
-    }
-    
-    # Delete old versions after 365 days
-    noncurrent_version_expiration {
-      noncurrent_days = 365
-    }
-  }
+  tags = var.additional_tags
 }
 
 # IAM role for Bedrock Knowledge Base
+# DOCUMENTATION ONLY - Reflects actual deployed role: ai-assistant-dev-bedrock-kb-role
 resource "aws_iam_role" "bedrock_kb_role" {
-  name = "${var.project_name}-${var.environment}-bedrock-kb-role"
+  name = "ai-assistant-dev-bedrock-kb-role"
   
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -233,8 +215,8 @@ resource "aws_iam_role_policy" "bedrock_kb_s3_policy" {
           "s3:ListBucket"
         ]
         Resource = [
-          aws_s3_bucket.documents.arn,
-          "${aws_s3_bucket.documents.arn}/*"
+          module.s3.documents_bucket_arn,
+          "${module.s3.documents_bucket_arn}/*"
         ]
       }
     ]
@@ -381,10 +363,11 @@ manage_index()
 }
 
 # Bedrock Knowledge Base
+# DOCUMENTATION ONLY - Reflects actual deployed Knowledge Base: PQB7MB5ORO
 resource "aws_bedrockagent_knowledge_base" "main" {
-  name        = var.knowledge_base_name
-  description = var.knowledge_base_description
-  role_arn    = aws_iam_role.bedrock_kb_role.arn
+  name        = "ai-assistant-knowledge-base"
+  description = "AI Assistant Knowledge Base for development team"
+  role_arn    = "arn:aws:iam::${local.account_id}:role/ai-assistant-dev-bedrock-kb-role"
   
   knowledge_base_configuration {
     type = "VECTOR"
@@ -429,15 +412,16 @@ resource "aws_bedrockagent_knowledge_base" "main" {
 }
 
 # Bedrock Data Source (S3)
+# DOCUMENTATION ONLY - Reflects actual deployed data source: YUAUID9BJN
 resource "aws_bedrockagent_data_source" "s3_source" {
-  knowledge_base_id = aws_bedrockagent_knowledge_base.main.id
-  name              = "${var.project_name}-${var.environment}-s3-data-source"
-  description       = "S3 data source for ${var.project_name} documents"
+  knowledge_base_id = local.knowledge_base_id
+  name              = "ai-assistant-dev-s3-data-source"
+  description       = "S3 data source for ai-assistant documents"
   
   data_source_configuration {
     type = "S3"
     s3_configuration {
-      bucket_arn         = aws_s3_bucket.documents.arn
+      bucket_arn         = module.s3.documents_bucket_arn
       inclusion_prefixes = [var.documents_prefix]
     }
   }
@@ -459,19 +443,20 @@ resource "aws_bedrockagent_data_source" "s3_source" {
 data "aws_caller_identity" "current" {}
 
 # Cognito module for authentication
+# DOCUMENTATION ONLY - Reflects actual deployed Cognito User Pool: us-west-2_FLJTm8Xt8
 module "cognito" {
   source = "./modules/cognito"
   
-  project_name = var.project_name
-  aws_region   = var.aws_region
+  project_name = local.project_name
+  aws_region   = local.region
   
-  # Frontend callback URLs (will be updated with CloudFront URL later)
+  # Actual deployed callback URLs
   callback_urls = [
-    "https://diaxl2ky359mj.cloudfront.net/callback",
+    "https://${local.cloudfront_domain}/callback",
     "http://localhost:3000/callback"
   ]
   logout_urls = [
-    "https://diaxl2ky359mj.cloudfront.net/logout",
+    "https://${local.cloudfront_domain}/logout",
     "http://localhost:3000/logout"
   ]
   
@@ -479,14 +464,15 @@ module "cognito" {
 }
 
 # API Gateway module
+# DOCUMENTATION ONLY - Reflects actual deployed API Gateway: jpt8wzkowd
 module "api_gateway" {
   source = "./modules/api-gateway"
   
-  project_name          = var.project_name
-  aws_region           = var.aws_region
-  cognito_user_pool_arn = module.cognito.user_pool_arn
-  stage_name           = var.environment
-  allowed_origins      = var.allowed_origins
+  project_name          = local.project_name
+  aws_region           = local.region
+  cognito_user_pool_arn = "arn:aws:cognito-idp:${local.region}:${local.account_id}:userpool/${local.user_pool_id}"
+  stage_name           = local.environment
+  allowed_origins      = "https://${local.cloudfront_domain}"
   rate_limit          = var.api_rate_limit
   burst_limit         = var.api_burst_limit
   
@@ -494,11 +480,13 @@ module "api_gateway" {
 }
 
 # DynamoDB module for document metadata
+# DOCUMENTATION ONLY - Reflects actual deployed table: ai-assistant-dev-documents
 module "dynamodb" {
   source = "./modules/dynamodb"
   
-  project_name = var.project_name
-  environment  = var.environment
+  project_name = local.project_name
+  environment  = local.environment
+  table_name   = local.documents_table_name
   tags         = var.additional_tags
 }
 
@@ -508,7 +496,7 @@ module "iam" {
   
   project_name         = var.project_name
   aws_region          = var.aws_region
-  documents_bucket_arn = aws_s3_bucket.documents.arn
+  documents_bucket_arn = module.s3.documents_bucket_arn
   documents_table_arn  = module.dynamodb.table_arn
   
   tags = var.additional_tags
@@ -523,7 +511,7 @@ module "document_upload_lambda" {
   aws_region      = var.aws_region
   
   lambda_execution_role_arn = module.iam.lambda_document_execution_role_arn
-  documents_bucket_name     = aws_s3_bucket.documents.bucket
+  documents_bucket_name     = module.s3.documents_bucket_id
   documents_table_name      = module.dynamodb.table_name
   knowledge_base_id         = aws_bedrockagent_knowledge_base.main.id
   data_source_id           = aws_bedrockagent_data_source.s3_source.data_source_id
@@ -561,7 +549,7 @@ module "document_management_lambda" {
   aws_region      = var.aws_region
   
   lambda_execution_role_arn = module.iam.lambda_document_execution_role_arn
-  documents_bucket_name     = aws_s3_bucket.documents.bucket
+  documents_bucket_name     = module.s3.documents_bucket_id
   documents_table_name      = module.dynamodb.table_name
   knowledge_base_id         = aws_bedrockagent_knowledge_base.main.id
   data_source_id           = aws_bedrockagent_data_source.s3_source.data_source_id
@@ -591,6 +579,7 @@ module "chat_handler_lambda" {
   api_gateway_authorizer_id     = module.api_gateway.authorizer_id
   api_gateway_execution_arn     = module.api_gateway.api_gateway_execution_arn
   
+  cloudfront_url      = module.cloudfront.cloudfront_url
   log_level           = "INFO"
   enable_advanced_rag = "false"
 }
@@ -621,17 +610,18 @@ module "admin_management_lambda" {
 }
 
 # CloudFront distribution for React frontend
+# DOCUMENTATION ONLY - Reflects actual deployed distribution: EL8L41G6CQJCD
 module "cloudfront" {
   source = "./modules/cloudfront"
   
-  project_name         = var.project_name
-  environment          = var.environment
-  aws_region          = var.aws_region
-  frontend_bucket_name = "${var.project_name}-${var.environment}-frontend-${random_id.suffix.hex}"
+  project_name         = local.project_name
+  environment          = local.environment
+  aws_region          = local.region
+  frontend_bucket_name = local.frontend_bucket_name
   
-  # Extract domain from API Gateway invoke URL
-  api_gateway_domain = "${module.api_gateway.api_gateway_id}.execute-api.${var.aws_region}.amazonaws.com"
-  cognito_domain     = module.cognito.user_pool_domain
+  # Actual deployed API Gateway domain
+  api_gateway_domain = "${local.api_gateway_id}.execute-api.${local.region}.amazonaws.com"
+  cognito_domain     = "ai-assistant-auth-3gja49wa"
   
   price_class    = "PriceClass_100"
   enable_ipv6    = true
@@ -653,6 +643,44 @@ module "monitoring_metrics_lambda" {
   log_retention_days      = 30
 }
 
+# Bedrock Knowledge Base Module
+# DOCUMENTATION ONLY - Reflects actual deployed Bedrock resources
+module "bedrock" {
+  source = "./modules/bedrock"
+  
+  # Actual deployed Knowledge Base configuration
+  knowledge_base_name        = "ai-assistant-knowledge-base"
+  knowledge_base_description = "AI Assistant Knowledge Base for document retrieval and generation"
+  knowledge_base_role_arn    = "arn:aws:iam::${local.account_id}:role/ai-assistant-dev-bedrock-kb-role"
+  
+  # Actual deployed data source configuration
+  data_source_name        = "ai-assistant-dev-s3-data-source"
+  data_source_description = "S3 data source for AI Assistant documents"
+  s3_bucket_arn          = module.s3.documents_bucket_arn
+  s3_inclusion_prefixes  = ["documents/"]
+  bucket_owner_account_id = local.account_id
+  
+  # Vector configuration
+  embedding_model_arn = "arn:aws:bedrock:us-west-2::foundation-model/amazon.titan-embed-text-v1"
+  chunking_strategy   = "FIXED_SIZE"
+  max_tokens_per_chunk = 300
+  chunk_overlap_percentage = 20
+  
+  # OpenSearch configuration
+  opensearch_collection_name = "ai-assistant-knowledge-base-collection"
+  opensearch_collection_arn  = "arn:aws:aoss:us-west-2:${local.account_id}:collection/ai-assistant-knowledge-base-collection"
+  vector_index_name         = "bedrock-knowledge-base-default-index"
+  vector_field_name         = "bedrock-knowledge-base-default-vector"
+  text_field_name           = "AMAZON_BEDROCK_TEXT_CHUNK"
+  metadata_field_name       = "AMAZON_BEDROCK_METADATA"
+  
+  # AWS configuration
+  aws_region     = local.region
+  aws_account_id = local.account_id
+  
+  tags = var.additional_tags
+}
+
 # CloudWatch Monitoring and Alerting
 module "monitoring" {
   source = "./modules/monitoring"
@@ -671,6 +699,6 @@ module "monitoring" {
   document_lambda_function_name   = module.document_management_lambda.lambda_function_name
   admin_lambda_function_name      = module.admin_management_lambda.lambda_function_name
   documents_table_name            = module.dynamodb.table_name
-  knowledge_base_id               = aws_bedrockagent_knowledge_base.main.id
-  s3_bucket_name                  = aws_s3_bucket.documents.bucket
+  knowledge_base_id               = local.knowledge_base_id
+  s3_bucket_name                  = module.s3.documents_bucket_id
 }

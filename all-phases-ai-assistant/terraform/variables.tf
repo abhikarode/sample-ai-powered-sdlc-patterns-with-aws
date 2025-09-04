@@ -1,4 +1,19 @@
+/*
+ * ============================================================================
+ * WARNING: DOCUMENTATION ONLY - DO NOT USE FOR DEPLOYMENT
+ * ============================================================================
+ * 
+ * This Terraform configuration is for documentation purposes only.
+ * It reflects the current state of AWS infrastructure deployed via AWS CLI.
+ * 
+ * DO NOT RUN: terraform plan, terraform apply, or terraform destroy
+ * 
+ * For deployments, use AWS CLI commands as specified in deployment-workflow.md
+ * ============================================================================
+ */
+
 # Variables for AI Assistant Terraform configuration
+# DOCUMENTATION ONLY - Default values match actual deployed resources
 
 variable "aws_region" {
   description = "AWS region for all resources"
@@ -23,14 +38,14 @@ variable "environment" {
 }
 
 variable "project_name" {
-  description = "Name of the project"
+  description = "Name of the project (matches actual deployment)"
   type        = string
   default     = "ai-assistant"
 }
 
 # Knowledge Base Configuration
 variable "knowledge_base_name" {
-  description = "Name of the Bedrock Knowledge Base"
+  description = "Name of the Bedrock Knowledge Base (actual deployed: PQB7MB5ORO)"
   type        = string
   default     = "ai-assistant-knowledge-base"
 }
@@ -65,9 +80,9 @@ variable "embedding_dimensions" {
 
 # S3 Configuration
 variable "documents_bucket_name" {
-  description = "Name of the S3 bucket for documents (will be prefixed with project and environment)"
+  description = "Name of the S3 bucket for documents (actual deployed: ai-assistant-dev-documents-993738bb)"
   type        = string
-  default     = "documents"
+  default     = "ai-assistant-dev-documents-993738bb"
 }
 
 variable "documents_prefix" {
@@ -121,9 +136,9 @@ variable "alert_email_addresses" {
 
 # Security Configuration
 variable "allowed_origins" {
-  description = "Allowed origins for CORS (must use HTTPS)"
+  description = "Allowed origins for CORS (actual deployed: https://dq9tlzfsf1veq.cloudfront.net)"
   type        = string
-  default     = "https://diaxl2ky359mj.cloudfront.net"
+  default     = "https://dq9tlzfsf1veq.cloudfront.net"
   
   validation {
     condition     = can(regex("^https://", var.allowed_origins))

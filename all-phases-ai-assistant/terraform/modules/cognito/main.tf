@@ -1,20 +1,37 @@
+/*
+ * ============================================================================
+ * WARNING: DOCUMENTATION ONLY - DO NOT USE FOR DEPLOYMENT
+ * ============================================================================
+ * 
+ * This Terraform configuration is for documentation purposes only.
+ * It reflects the current state of AWS infrastructure deployed via AWS CLI.
+ * 
+ * DO NOT RUN: terraform plan, terraform apply, or terraform destroy
+ * 
+ * For deployments, use AWS CLI commands as specified in deployment-workflow.md
+ * ============================================================================
+ */
+
 # Cognito User Pool for AI Assistant Authentication
-# This module creates a Cognito User Pool with email authentication and user roles
+# This module documents the deployed Cognito User Pool with email authentication and user roles
 
 # Data source for current AWS caller identity
 data "aws_caller_identity" "current" {}
 
-# Cognito User Pool
+# Cognito User Pool - ACTUAL DEPLOYED CONFIGURATION
+# User Pool ID: us-west-2_FLJTm8Xt8
+# Name: ai-assistant-user-pool
 resource "aws_cognito_user_pool" "ai_assistant" {
-  name = "${var.project_name}-user-pool"
+  # ACTUAL VALUES FROM DEPLOYED INFRASTRUCTURE
+  name = "ai-assistant-user-pool"  # Actual deployed name
 
-  # Email as username
+  # Email as username (matches deployed config)
   username_attributes = ["email"]
   
-  # Auto-verify email addresses
+  # Auto-verify email addresses (matches deployed config)
   auto_verified_attributes = ["email"]
 
-  # Enhanced password policy for security
+  # Password policy (matches deployed config)
   password_policy {
     minimum_length                   = 12
     require_lowercase               = true
@@ -24,12 +41,12 @@ resource "aws_cognito_user_pool" "ai_assistant" {
     temporary_password_validity_days = 7
   }
 
-  # Email configuration
+  # Email configuration (matches deployed config)
   email_configuration {
     email_sending_account = "COGNITO_DEFAULT"
   }
 
-  # Custom attributes for user roles
+  # Custom attributes for user roles (matches deployed config)
   schema {
     name                = "role"
     attribute_data_type = "String"
@@ -42,7 +59,7 @@ resource "aws_cognito_user_pool" "ai_assistant" {
     }
   }
 
-  # Account recovery settings
+  # Account recovery settings (matches deployed config)
   account_recovery_setting {
     recovery_mechanism {
       name     = "verified_email"
@@ -50,12 +67,12 @@ resource "aws_cognito_user_pool" "ai_assistant" {
     }
   }
 
-  # User pool add-ons for advanced security
+  # User pool add-ons for advanced security (matches deployed config)
   user_pool_add_ons {
     advanced_security_mode = "ENFORCED"
   }
 
-  # Account lockout policy
+  # Account lockout policy (matches deployed config)
   admin_create_user_config {
     allow_admin_create_user_only = false
     
@@ -66,7 +83,7 @@ resource "aws_cognito_user_pool" "ai_assistant" {
     }
   }
 
-  # Device configuration for enhanced security
+  # Device configuration for enhanced security (matches deployed config)
   device_configuration {
     challenge_required_on_new_device      = true
     device_only_remembered_on_user_prompt = true
@@ -75,24 +92,26 @@ resource "aws_cognito_user_pool" "ai_assistant" {
   tags = var.tags
 }
 
-# Cognito User Pool Client
+# Cognito User Pool Client - ACTUAL DEPLOYED CONFIGURATION
+# Client ID: 3gr32ei5n768d88h02klhmpn8v
+# Name: ai-assistant-client
 resource "aws_cognito_user_pool_client" "ai_assistant_client" {
-  name         = "${var.project_name}-client"
-  user_pool_id = aws_cognito_user_pool.ai_assistant.id
+  # ACTUAL VALUES FROM DEPLOYED INFRASTRUCTURE
+  name         = "ai-assistant-client"  # Actual deployed name
+  user_pool_id = "us-west-2_FLJTm8Xt8"  # Actual deployed user pool ID
 
-  # OAuth configuration
-  allowed_oauth_flows_user_pool_client = true
-  allowed_oauth_flows                  = ["code", "implicit"]
-  allowed_oauth_scopes                 = ["email", "openid", "profile"]
+  # OAuth configuration (matches deployed config - OAuth disabled)
+  allowed_oauth_flows_user_pool_client = false  # Actual deployed value
+  # Note: OAuth flows and scopes not configured in deployed client
   
-  # Callback URLs for the frontend application
-  callback_urls = var.callback_urls
-  logout_urls   = var.logout_urls
+  # Callback URLs and logout URLs not configured in deployed client
+  # callback_urls = var.callback_urls
+  # logout_urls   = var.logout_urls
 
-  # Supported identity providers
+  # Supported identity providers (matches deployed config)
   supported_identity_providers = ["COGNITO"]
 
-  # Token validity
+  # Token validity (matches deployed config)
   access_token_validity  = 1  # 1 hour
   id_token_validity     = 1  # 1 hour
   refresh_token_validity = 30 # 30 days
@@ -103,38 +122,52 @@ resource "aws_cognito_user_pool_client" "ai_assistant_client" {
     refresh_token = "days"
   }
 
-  # Explicit auth flows
+  # Explicit auth flows (matches deployed config)
   explicit_auth_flows = [
-    "ALLOW_USER_SRP_AUTH",
+    "ALLOW_ADMIN_USER_PASSWORD_AUTH",
     "ALLOW_REFRESH_TOKEN_AUTH",
-    "ALLOW_USER_PASSWORD_AUTH"
+    "ALLOW_USER_PASSWORD_AUTH",
+    "ALLOW_USER_SRP_AUTH"
   ]
 
-  # Prevent user existence errors
+  # Prevent user existence errors (matches deployed config)
   prevent_user_existence_errors = "ENABLED"
 
-  # Read and write attributes
-  read_attributes = [
-    "email",
-    "email_verified",
-    "custom:role"
-  ]
+  # Enable token revocation (matches deployed config)
+  enable_token_revocation = true
 
-  write_attributes = [
-    "email",
-    "custom:role"
-  ]
+  # Auth session validity (matches deployed config)
+  auth_session_validity = 3  # 3 minutes
+
+  # Read and write attributes not explicitly configured in deployed client
+  # Using default behavior
 }
 
-# Cognito User Pool Domain
+# Cognito User Pool Domain - ACTUAL DEPLOYED CONFIGURATION
+# Domain: ai-assistant-auth-3gja49wa
+# CloudFront Distribution: dpp0gtxikpq3y.cloudfront.net
 resource "aws_cognito_user_pool_domain" "ai_assistant_domain" {
-  domain       = "${var.project_name}-auth-${random_string.domain_suffix.result}"
-  user_pool_id = aws_cognito_user_pool.ai_assistant.id
+  # ACTUAL VALUES FROM DEPLOYED INFRASTRUCTURE
+  domain       = "ai-assistant-auth-3gja49wa"  # Actual deployed domain
+  user_pool_id = "us-west-2_FLJTm8Xt8"        # Actual deployed user pool ID
 }
 
-# Random string for unique domain suffix
-resource "random_string" "domain_suffix" {
-  length  = 8
-  special = false
-  upper   = false
+# Note: Random string resource not needed for documentation
+# The actual domain suffix "3gja49wa" is already deployed
+
+# Cognito User Groups - ACTUAL DEPLOYED CONFIGURATION
+resource "aws_cognito_user_group" "admin_group" {
+  # ACTUAL VALUES FROM DEPLOYED INFRASTRUCTURE
+  name         = "admin"                        # Actual deployed group name
+  user_pool_id = "us-west-2_FLJTm8Xt8"        # Actual deployed user pool ID
+  description  = "Administrator group with full system access"  # Actual deployed description
+  # Note: precedence and role_arn not configured in deployed groups
+}
+
+resource "aws_cognito_user_group" "user_group" {
+  # ACTUAL VALUES FROM DEPLOYED INFRASTRUCTURE
+  name         = "user"                         # Actual deployed group name
+  user_pool_id = "us-west-2_FLJTm8Xt8"        # Actual deployed user pool ID
+  description  = "Regular user group with standard access"  # Actual deployed description
+  # Note: precedence and role_arn not configured in deployed groups
 }

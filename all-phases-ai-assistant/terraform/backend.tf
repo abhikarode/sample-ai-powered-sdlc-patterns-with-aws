@@ -1,12 +1,27 @@
+/*
+ * ============================================================================
+ * WARNING: DOCUMENTATION ONLY - DO NOT USE FOR DEPLOYMENT
+ * ============================================================================
+ * 
+ * This Terraform configuration is for documentation purposes only.
+ * It reflects the current state of AWS infrastructure deployed via AWS CLI.
+ * 
+ * DO NOT RUN: terraform plan, terraform apply, or terraform destroy
+ * 
+ * For deployments, use AWS CLI commands as specified in deployment-workflow.md
+ * ============================================================================
+ */
+
 # Backend configuration for Terraform state management
-# This will be configured during terraform init
+# DOCUMENTATION ONLY - Not used for actual deployments
 
 terraform {
-  # Remove the backend block for now - we'll configure it separately
+  # Backend configuration is not used since this is documentation only
+  # All infrastructure is managed via AWS CLI
   # backend "s3" {
-  #   # Configuration will be provided via backend config file
+  #   # Configuration would be provided via backend config file
   # }
 }
 
-# For now, use local backend for development
-# In production, this should be configured with S3 backend
+# Note: Local backend for documentation purposes only
+# Actual infrastructure is managed via AWS CLI, not Terraform state

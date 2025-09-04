@@ -9,12 +9,14 @@
  * 1. Comprehensive E2E Tests (all workflows)
  * 2. Authentication E2E Tests (Cognito integration)
  * 3. Performance E2E Tests (AWS service performance)
+ * 4. Admin Comprehensive E2E Tests (admin dashboard and features)
  * 
  * Usage:
  * - Run from command line: npx ts-node __tests__/run-e2e-tests.ts
  * - Or import and call: runAllE2ETests()
  */
 
+import { runComprehensiveAdminE2ETests } from './admin-comprehensive-e2e.playwright.mcp.test';
 import { runAuthenticationE2ETests } from './authentication-e2e.playwright.test';
 import { runComprehensiveE2ETests } from './comprehensive-e2e-tests.playwright.test';
 import { runPerformanceE2ETests } from './performance-e2e.playwright.test';
@@ -34,7 +36,8 @@ async function runAllE2ETests() {
   const testResults = {
     comprehensive: { passed: false, error: null as any },
     authentication: { passed: false, error: null as any },
-    performance: { passed: false, error: null as any, results: null as any }
+    performance: { passed: false, error: null as any, results: null as any },
+    adminComprehensive: { passed: false, error: null as any, results: null as any }
   };
   
   const startTime = Date.now();
@@ -78,6 +81,20 @@ async function runAllE2ETests() {
       console.error('❌ Performance E2E Tests failed:', error.message);
     }
     
+    console.log('\n' + '='.repeat(50) + '\n');
+    
+    // Run Admin Comprehensive E2E Tests
+    console.log('📋 Running Admin Comprehensive E2E Tests...');
+    try {
+      const adminResults = await runComprehensiveAdminE2ETests();
+      testResults.adminComprehensive.passed = true;
+      testResults.adminComprehensive.results = adminResults;
+      console.log('✅ Admin Comprehensive E2E Tests completed successfully');
+    } catch (error) {
+      testResults.adminComprehensive.error = error.message;
+      console.error('❌ Admin Comprehensive E2E Tests failed:', error.message);
+    }
+    
   } catch (error) {
     console.error('❌ E2E Test Suite execution failed:', error.message);
   }
@@ -93,7 +110,8 @@ async function runAllE2ETests() {
   const testSuites = [
     { name: 'Comprehensive E2E Tests', result: testResults.comprehensive },
     { name: 'Authentication E2E Tests', result: testResults.authentication },
-    { name: 'Performance E2E Tests', result: testResults.performance }
+    { name: 'Performance E2E Tests', result: testResults.performance },
+    { name: 'Admin Comprehensive E2E Tests', result: testResults.adminComprehensive }
   ];
   
   let passedSuites = 0;
@@ -122,6 +140,8 @@ async function runAllE2ETests() {
     console.log('✅ Document upload and Knowledge Base integration verified');
     console.log('✅ Chat interface working with real Bedrock');
     console.log('✅ Admin dashboard functionality confirmed');
+    console.log('✅ Admin-specific features and CORS compliance verified');
+    console.log('✅ Admin access to all application areas validated');
     console.log('✅ Performance requirements met on real AWS infrastructure');
     console.log('✅ Role-based access control functioning correctly');
     console.log('✅ Error handling and resilience verified');

@@ -1,6 +1,10 @@
-# AI Assistant Terraform Infrastructure
+# AI Assistant Terraform Infrastructure Documentation
 
-This Terraform configuration sets up the infrastructure for an AI-powered software development assistant using Amazon Bedrock Knowledge Bases.
+⚠️ **CRITICAL WARNING: DOCUMENTATION ONLY - DO NOT USE FOR DEPLOYMENT** ⚠️
+
+This Terraform configuration serves as **DOCUMENTATION ONLY** for the AI-powered software development assistant infrastructure. These files accurately reflect the current AWS deployment state but must **NEVER** be used for actual deployment.
+
+**DEPLOYMENT POLICY**: All infrastructure is deployed and managed via AWS CLI and AWS Console only. Terraform is strictly prohibited for deployment purposes in this project.
 
 ## Architecture Overview
 
@@ -18,31 +22,52 @@ The infrastructure includes:
 2. **Terraform**: Version >= 1.0
 3. **AWS Permissions**: Required permissions for Bedrock, S3, OpenSearch Serverless, and IAM
 
-## Quick Start
+## ⚠️ IMPORTANT: NO DEPLOYMENT COMMANDS
 
-### 1. Initialize Terraform
+**DO NOT RUN THE FOLLOWING COMMANDS:**
+- ❌ `terraform init`
+- ❌ `terraform plan`
+- ❌ `terraform apply`
+- ❌ `terraform destroy`
 
-```bash
-terraform init
-```
+These Terraform files are for **DOCUMENTATION AND REFERENCE ONLY**.
 
-### 2. Validate Configuration
+## Documentation Guides
 
-```bash
-terraform validate
-```
+This directory contains comprehensive documentation for developers and maintainers:
 
-### 3. Plan Deployment
+- **[README.md](./README.md)** - This file: Overview and deployment procedures
+- **[QUICK_REFERENCE.md](./QUICK_REFERENCE.md)** - ⭐ Essential resource IDs and quick commands
+- **[DEVELOPER_GUIDE.md](./DEVELOPER_GUIDE.md)** - How to use Terraform docs for development
+- **[DOCUMENTATION_MAINTENANCE.md](./DOCUMENTATION_MAINTENANCE.md)** - How to keep docs accurate
 
-```bash
-terraform plan -var-file="environments/dev/terraform.tfvars"
-```
+## How to Use This Documentation
 
-### 4. Deploy Infrastructure
+### For Understanding Infrastructure
+1. **Review module structure** to understand component relationships
+2. **Check resource configurations** to see current AWS settings
+3. **Reference outputs** to find actual resource IDs and ARNs
+4. **Study variables** to understand configuration parameters
 
-```bash
-terraform apply -var-file="environments/dev/terraform.tfvars"
-```
+### For Development Integration
+- **Read [DEVELOPER_GUIDE.md](./DEVELOPER_GUIDE.md)** for integration patterns
+- **Use outputs.tf** to find actual resource IDs for your code
+- **Check module configurations** to understand service relationships
+- **Verify with AWS CLI** before making assumptions
+
+### For Documentation Maintenance
+- **Follow [DOCUMENTATION_MAINTENANCE.md](./DOCUMENTATION_MAINTENANCE.md)** procedures
+- **Run validation script** monthly and after AWS changes
+- **Update immediately** when making infrastructure changes
+- **Keep documentation synchronized** with actual AWS state
+
+### For Deployment (AWS CLI Only)
+All infrastructure changes must be made through:
+- **AWS Console**: For interactive resource management
+- **AWS CLI**: For scripted deployments and updates
+- **AWS SDK**: For programmatic resource management
+
+See the [Deployment Guide](#deployment-guide) section below for proper deployment procedures.
 
 ## Configuration
 
@@ -147,20 +172,190 @@ terraform state list
 terraform destroy -var-file="environments/dev/terraform.tfvars"
 ```
 
-## Next Steps
+## Deployment Guide
 
-After infrastructure deployment:
+### Actual Deployment Process (AWS CLI Only)
 
-1. Upload test documents to the S3 bucket
-2. Trigger Knowledge Base synchronization
-3. Test RetrieveAndGenerate API functionality
-4. Deploy Lambda functions for chat interface
-5. Set up API Gateway and frontend application
+Since Terraform files are documentation-only, use these AWS CLI approaches for infrastructure management:
 
-## Support
+#### Lambda Function Deployment
+```bash
+# Update Lambda function code
+aws lambda update-function-code \
+  --function-name ai-assistant-chat-endpoints \
+  --zip-file fileb://function.zip
 
-For issues or questions:
-1. Check Terraform logs for detailed error messages
-2. Verify AWS credentials and permissions
-3. Ensure all prerequisites are met
-4. Review AWS service quotas and limits
+# Update function configuration
+aws lambda update-function-configuration \
+  --function-name ai-assistant-chat-endpoints \
+  --runtime nodejs20.x \
+  --environment Variables='{KEY=value}'
+```
+
+#### API Gateway Management
+```bash
+# List API Gateway resources
+aws apigateway get-resources --rest-api-id jpt8wzkowd
+
+# Update API Gateway configuration via AWS Console
+# Navigate to: API Gateway > ai-assistant-api > Resources
+```
+
+#### S3 and DynamoDB Management
+```bash
+# Upload documents to S3
+aws s3 cp document.pdf s3://ai-assistant-dev-documents-993738bb/
+
+# Query DynamoDB table
+aws dynamodb scan --table-name ai-assistant-dev-documents
+```
+
+#### Bedrock Knowledge Base Management
+```bash
+# Start Knowledge Base sync
+aws bedrock-agent start-ingestion-job \
+  --knowledge-base-id PQB7MB5ORO \
+  --data-source-id YUAUID9BJN
+```
+
+## Maintaining Documentation Accuracy
+
+### Regular Validation Process
+
+This documentation must be kept in sync with actual AWS infrastructure. Follow this process:
+
+#### 1. Monthly Validation (Required)
+Run the validation script to check documentation accuracy:
+```bash
+cd all-phases-ai-assistant/terraform
+./validate-terraform-docs.sh
+```
+
+#### 2. After Infrastructure Changes
+Whenever AWS resources are modified via CLI/Console:
+
+1. **Query current state** using AWS CLI
+2. **Update Terraform files** to match current state
+3. **Run validation** to ensure accuracy
+4. **Commit changes** to version control
+
+#### 3. Validation Commands
+```bash
+# Verify Lambda functions match documentation
+aws lambda list-functions --query 'Functions[?starts_with(FunctionName, `ai-assistant`)].{Name:FunctionName,Runtime:Runtime,Role:Role}'
+
+# Verify API Gateway matches documentation
+aws apigateway get-rest-api --rest-api-id jpt8wzkowd
+
+# Verify Cognito User Pool matches documentation
+aws cognito-idp describe-user-pool --user-pool-id us-west-2_FLJTm8Xt8
+
+# Verify S3 buckets match documentation
+aws s3api list-buckets --query 'Buckets[?starts_with(Name, `ai-assistant`)].Name'
+
+# Verify DynamoDB table matches documentation
+aws dynamodb describe-table --table-name ai-assistant-dev-documents
+
+# Verify Bedrock Knowledge Base matches documentation
+aws bedrock-agent get-knowledge-base --knowledge-base-id PQB7MB5ORO
+```
+
+### Documentation Update Workflow
+
+When AWS infrastructure changes are made:
+
+1. **Make infrastructure changes** via AWS CLI/Console
+2. **Document the changes** by updating corresponding Terraform files
+3. **Update resource IDs/ARNs** in variables and outputs
+4. **Add documentation warnings** to any new files
+5. **Test validation script** to ensure accuracy
+6. **Commit documentation updates** with descriptive commit message
+
+### File-Specific Maintenance
+
+#### Variables (variables.tf)
+- Update default values to match current deployment
+- Add new variables for any new resources
+- Remove variables for decommissioned resources
+
+#### Outputs (outputs.tf)
+- Update resource IDs and ARNs from AWS CLI queries
+- Add outputs for new resources
+- Verify all outputs reflect actual AWS state
+
+#### Module Configurations
+- Update resource names to match AWS Console
+- Sync configuration parameters with actual settings
+- Add documentation warnings to new modules
+
+## Developer Usage Guide
+
+### Understanding the Infrastructure
+
+#### 1. Architecture Overview
+- **Start with**: `main.tf` to understand overall structure
+- **Review modules**: Each module represents a major AWS service
+- **Check relationships**: Follow resource references between modules
+
+#### 2. Finding Resource Information
+```bash
+# Find actual resource IDs in outputs.tf
+grep -r "output.*id" .
+
+# Find resource configurations in modules
+find modules/ -name "main.tf" -exec grep -l "resource" {} \;
+
+# Check current variable values
+cat variables.tf | grep -A 5 "default"
+```
+
+#### 3. Troubleshooting with Documentation
+- **Lambda issues**: Check `modules/lambda/*/main.tf` for function configurations
+- **API Gateway issues**: Review `modules/api-gateway/main.tf` for endpoint setup
+- **Permission issues**: Check `modules/iam/main.tf` for role and policy definitions
+- **Storage issues**: Review `modules/s3/main.tf` and `modules/dynamodb/main.tf`
+
+#### 4. Cross-Referencing with AWS
+```bash
+# Compare documentation with actual AWS state
+aws lambda get-function --function-name ai-assistant-chat-endpoints
+# Then check modules/lambda/chat-handler/main.tf
+
+aws apigateway get-rest-api --rest-api-id jpt8wzkowd
+# Then check modules/api-gateway/main.tf
+```
+
+### Best Practices for Developers
+
+1. **Always verify with AWS CLI** before making assumptions based on documentation
+2. **Update documentation** when you make infrastructure changes
+3. **Use validation script** to check accuracy before major deployments
+4. **Reference actual resource IDs** from outputs.tf for integration code
+5. **Check module README files** for service-specific guidance
+
+## Support and Troubleshooting
+
+### Documentation Issues
+If Terraform documentation doesn't match AWS reality:
+
+1. **Run validation script**: `./validate-terraform-docs.sh`
+2. **Check recent AWS changes**: Review CloudTrail or AWS Config
+3. **Update documentation**: Modify Terraform files to match current state
+4. **Report discrepancies**: Create issue with validation script output
+
+### Infrastructure Issues
+For actual infrastructure problems:
+
+1. **Use AWS Console**: Direct service management and troubleshooting
+2. **Check CloudWatch logs**: Monitor application and service logs
+3. **Review IAM permissions**: Verify roles and policies in AWS Console
+4. **Consult AWS documentation**: Use official AWS service documentation
+
+### Emergency Procedures
+In case of production issues:
+
+1. **Never use Terraform commands** for emergency fixes
+2. **Use AWS Console** for immediate issue resolution
+3. **Document emergency changes** in incident reports
+4. **Update Terraform documentation** after incident resolution
+5. **Run validation** to ensure documentation accuracy post-incident

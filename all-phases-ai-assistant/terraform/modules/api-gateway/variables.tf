@@ -1,14 +1,29 @@
-# Variables for API Gateway module
+/*
+ * ============================================================================
+ * WARNING: DOCUMENTATION ONLY - DO NOT USE FOR DEPLOYMENT
+ * ============================================================================
+ * 
+ * This Terraform configuration is for documentation purposes only.
+ * It reflects the current state of AWS infrastructure deployed via AWS CLI.
+ * 
+ * DO NOT RUN: terraform plan, terraform apply, or terraform destroy
+ * 
+ * For deployments, use AWS CLI commands as specified in deployment-workflow.md
+ * ============================================================================
+ */
+
+# Variables for API Gateway module - DEPLOYED VALUES
 
 variable "project_name" {
   description = "Name of the project"
   type        = string
-  default     = "ai-assistant"
+  default     = "ai-assistant"  # Actual deployed project name
 }
 
 variable "cognito_user_pool_arn" {
   description = "ARN of the Cognito User Pool for authorization"
   type        = string
+  default     = "arn:aws:cognito-idp:us-west-2:254539707041:userpool/us-west-2_FLJTm8Xt8"  # Actual deployed User Pool ARN
 }
 
 variable "stage_name" {
@@ -32,7 +47,7 @@ variable "aws_region" {
 variable "allowed_origins" {
   description = "Allowed origins for CORS (comma-separated list or single origin)"
   type        = string
-  default     = "https://diaxl2ky359mj.cloudfront.net"
+  default     = "https://dq9tlzfsf1veq.cloudfront.net"  # Actual deployed CloudFront domain
   
   validation {
     condition     = can(regex("^https://", var.allowed_origins))

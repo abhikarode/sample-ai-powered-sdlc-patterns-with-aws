@@ -1,10 +1,28 @@
-# Lambda Function for Custom Metrics Collection and Audit Logging
+/*
+ * ============================================================================
+ * WARNING: DOCUMENTATION ONLY - DO NOT USE FOR DEPLOYMENT
+ * ============================================================================
+ * 
+ * This Terraform configuration is for documentation purposes only.
+ * It reflects the current state of AWS infrastructure deployed via AWS CLI.
+ * 
+ * DO NOT RUN: terraform plan, terraform apply, or terraform destroy
+ * 
+ * For deployments, use AWS CLI commands as specified in deployment-workflow.md
+ * ============================================================================
+ */
 
-# Lambda function for metrics collection
+# Lambda Function for Custom Metrics Collection and Audit Logging (DOCUMENTATION ONLY)
+# ACTUAL DEPLOYED FUNCTION: ai-assistant-monitoring-metrics (nodejs18.x)
+# ACTUAL IAM ROLE: ai-assistant-monitoring-metrics-role
+
+# Lambda function for metrics collection (DOCUMENTATION ONLY)
+# ACTUAL DEPLOYED FUNCTION: ai-assistant-monitoring-metrics
+# ACTUAL ROLE: arn:aws:iam::254539707041:role/ai-assistant-monitoring-metrics-role
 resource "aws_lambda_function" "monitoring_metrics" {
   filename         = "${path.module}/monitoring-metrics.zip"
-  function_name    = "${var.project_name}-monitoring-metrics"
-  role            = aws_iam_role.monitoring_metrics_role.arn
+  function_name    = "ai-assistant-monitoring-metrics"
+  role            = "arn:aws:iam::254539707041:role/ai-assistant-monitoring-metrics-role"
   handler         = "index.handler"
   runtime         = "nodejs18.x"
   timeout         = 30
@@ -31,10 +49,11 @@ resource "aws_lambda_function" "monitoring_metrics" {
   }
 }
 
-# CloudWatch Log Group for the monitoring Lambda
+# CloudWatch Log Group for the monitoring Lambda (DOCUMENTATION ONLY)
+# ACTUAL LOG GROUP: /aws/lambda/ai-assistant-monitoring-metrics (retention: 30 days)
 resource "aws_cloudwatch_log_group" "monitoring_metrics_logs" {
-  name              = "/aws/lambda/${var.project_name}-monitoring-metrics"
-  retention_in_days = var.log_retention_days
+  name              = "/aws/lambda/ai-assistant-monitoring-metrics"
+  retention_in_days = 30
 
   tags = {
     Name        = "${var.project_name}-monitoring-metrics-logs"
@@ -43,9 +62,10 @@ resource "aws_cloudwatch_log_group" "monitoring_metrics_logs" {
   }
 }
 
-# IAM Role for the monitoring Lambda
+# IAM Role for the monitoring Lambda (DOCUMENTATION ONLY)
+# ACTUAL ROLE: ai-assistant-monitoring-metrics-role
 resource "aws_iam_role" "monitoring_metrics_role" {
-  name = "${var.project_name}-monitoring-metrics-role"
+  name = "ai-assistant-monitoring-metrics-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -119,9 +139,10 @@ resource "aws_iam_role_policy_attachment" "monitoring_metrics_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-# EventBridge rule to trigger metrics collection every 5 minutes
+# EventBridge rule to trigger metrics collection every 5 minutes (DOCUMENTATION ONLY)
+# ACTUAL RULE: ai-assistant-metrics-collection (rate(5 minutes))
 resource "aws_cloudwatch_event_rule" "metrics_collection_schedule" {
-  name                = "${var.project_name}-metrics-collection"
+  name                = "ai-assistant-metrics-collection"
   description         = "Trigger metrics collection every 5 minutes"
   schedule_expression = "rate(5 minutes)"
 

@@ -1,5 +1,21 @@
+/*
+ * ============================================================================
+ * WARNING: DOCUMENTATION ONLY - DO NOT USE FOR DEPLOYMENT
+ * ============================================================================
+ * 
+ * This Terraform configuration is for documentation purposes only.
+ * It reflects the current state of AWS infrastructure deployed via AWS CLI.
+ * 
+ * DO NOT RUN: terraform plan, terraform apply, or terraform destroy
+ * 
+ * For deployments, use AWS CLI commands as specified in deployment-workflow.md
+ * ============================================================================
+ */
+
 # Chat Handler Lambda Function Terraform Configuration
-# This creates the Lambda function for handling chat requests with RetrieveAndGenerate API
+# This documents the Lambda function for handling chat requests with RetrieveAndGenerate API
+# ACTUAL DEPLOYED FUNCTION: ai-assistant-chat-endpoints (nodejs20.x)
+# ACTUAL IAM ROLE: ai-assistant-lambda-chat-execution-role
 
 terraform {
   required_version = ">= 1.0"
@@ -58,9 +74,10 @@ resource "null_resource" "build_lambda" {
   }
 }
 
-# IAM role for Lambda execution
+# IAM role for Lambda execution (DOCUMENTATION ONLY)
+# ACTUAL DEPLOYED ROLE: ai-assistant-lambda-chat-execution-role
 resource "aws_iam_role" "chat_handler_role" {
-  name = "ai-assistant-chat-handler-role"
+  name = "ai-assistant-lambda-chat-execution-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -82,9 +99,9 @@ resource "aws_iam_role" "chat_handler_role" {
   }
 }
 
-# CloudWatch Logs policy for Lambda
+# CloudWatch Logs policy for Lambda (DOCUMENTATION ONLY)
 resource "aws_iam_policy" "chat_handler_logging" {
-  name        = "ai-assistant-chat-handler-logging"
+  name        = "ai-assistant-lambda-chat-execution-role-logging"
   path        = "/"
   description = "IAM policy for logging from chat handler Lambda"
 
@@ -135,17 +152,17 @@ data "aws_iam_policy_document" "chat_handler_bedrock" {
   }
 }
 
-# Bedrock permissions for Lambda
+# Bedrock permissions for Lambda (DOCUMENTATION ONLY)
 resource "aws_iam_policy" "chat_handler_bedrock" {
-  name        = "ai-assistant-chat-handler-bedrock"
+  name        = "ai-assistant-lambda-chat-execution-role-bedrock"
   path        = "/"
   description = "IAM policy for Bedrock access from chat handler Lambda"
   policy      = data.aws_iam_policy_document.chat_handler_bedrock.json
 }
 
-# CloudWatch metrics permissions for Lambda
+# CloudWatch metrics permissions for Lambda (DOCUMENTATION ONLY)
 resource "aws_iam_policy" "chat_handler_cloudwatch" {
-  name        = "ai-assistant-chat-handler-cloudwatch"
+  name        = "ai-assistant-lambda-chat-execution-role-cloudwatch"
   path        = "/"
   description = "IAM policy for CloudWatch metrics from chat handler Lambda"
 
@@ -179,7 +196,8 @@ resource "aws_iam_role_policy_attachment" "chat_handler_cloudwatch" {
   policy_arn = aws_iam_policy.chat_handler_cloudwatch.arn
 }
 
-# CloudWatch Log Group for Lambda
+# CloudWatch Log Group for Lambda (DOCUMENTATION ONLY)
+# ACTUAL LOG GROUP: /aws/lambda/ai-assistant-chat-endpoints (retention: 14 days)
 resource "aws_cloudwatch_log_group" "chat_handler" {
   name              = "/aws/lambda/ai-assistant-chat-endpoints"
   retention_in_days = 14
@@ -191,7 +209,10 @@ resource "aws_cloudwatch_log_group" "chat_handler" {
   }
 }
 
-# Lambda function
+# Lambda function (DOCUMENTATION ONLY)
+# ACTUAL DEPLOYED FUNCTION: ai-assistant-chat-endpoints
+# RUNTIME: nodejs20.x
+# ROLE: arn:aws:iam::254539707041:role/ai-assistant-lambda-chat-execution-role
 resource "aws_lambda_function" "chat_handler" {
   filename         = data.archive_file.chat_handler.output_path
   function_name    = "ai-assistant-chat-endpoints"
@@ -211,6 +232,7 @@ resource "aws_lambda_function" "chat_handler" {
       LOG_LEVEL           = var.log_level
       ENABLE_ADVANCED_RAG = var.enable_advanced_rag
       AWS_ACCOUNT_ID      = data.aws_caller_identity.current.account_id
+      ALLOWED_ORIGINS     = var.cloudfront_url
     }
   }
 
