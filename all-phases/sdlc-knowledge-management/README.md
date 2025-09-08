@@ -123,7 +123,7 @@ Security implementation following AWS best practices:
 
 ### **Prerequisites**
 - **AWS Account** with administrative permissions
-- **AWS CLI** configured with `aidlc_main` profile
+- **AWS CLI** configured with appropriate AWS profile
 - **Terraform** v1.0+ installed
 - **Node.js** v18+ and npm installed
 - **Python 3.9+** for Lambda functions
@@ -166,13 +166,13 @@ echo "📄 Documents Bucket: $DOCUMENTS_BUCKET"
 echo "🤖 Knowledge Base ID: $KB_ID"
 
 # 6. Upload sample documents (optional)
-aws s3 cp sample-docs/ s3://$DOCUMENTS_BUCKET/documents/ --recursive --profile aidlc_main
+aws s3 cp sample-docs/ s3://$DOCUMENTS_BUCKET/documents/ --recursive --profile YOUR_AWS_PROFILE
 
 # 7. Trigger Knowledge Base sync
 aws bedrock-agent start-ingestion-job \
   --knowledge-base-id $KB_ID \
   --data-source-id $DATA_SOURCE_ID \
-  --profile aidlc_main
+  --profile YOUR_AWS_PROFILE
 
 # 8. Run end-to-end tests against your deployment
 cd ../__tests__
@@ -182,7 +182,7 @@ FRONTEND_URL=$CLOUDFRONT_URL npm run test:e2e
 
 ### **Environment Configuration**
 - **🌍 Region**: All resources deployed in `us-west-2`
-- **👤 Profile**: Uses `aidlc_main` AWS CLI profile
+- **👤 Profile**: Uses configured AWS CLI profile
 - **🏷️ Tagging**: Consistent resource tagging for cost tracking
 - **🔧 Environment**: Configurable for dev/staging/prod deployments
 
