@@ -4,60 +4,43 @@ This repository contains a **sample SDLC Knowledge Management implementation** b
 
 ## 🎬 **Demo Video**
 
-See the SDLC Knowledge Management system in action! This 5-minute demo showcases the key features including document upload, AI-powered chat, and admin dashboard:
+See the SDLC Knowledge Management system in action! This 5-minute demo showcases all key features including document upload, AI-powered chat, and admin dashboard.
 
-### **📺 How to Watch the Demo**
+### **📺 Watch the Demo**
 
-**🎯 Choose Your Preferred Option:**
+[![SDLC Knowledge Management System Demo](https://img.youtube.com/vi/IxOuAzmN9bg/maxresdefault.jpg)](https://youtu.be/IxOuAzmN9bg)
 
-1. **🎬 Embedded Player** (Recommended - 7.9MB, 720p)
-   
-   <video width="800" controls>
-     <source src="./docs/videos/SDLC_Knowledge_Management_Demo_compressed.mp4" type="video/mp4">
-     Your browser does not support the video tag. <a href="./docs/videos/SDLC_Knowledge_Management_Demo_compressed.mp4">Download the demo video</a>
-   </video>
-   
-   - **[📺 GitHub Player](./docs/videos/SDLC_Knowledge_Management_Demo_compressed.mp4)** - Click to view in GitHub
-   - **[📥 Download](https://github.com/abhikarode/sample-ai-powered-sdlc-patterns-with-aws/raw/main/all-phases/sdlc-knowledge-management/docs/videos/SDLC_Knowledge_Management_Demo_compressed.mp4)** - Right-click "Save As"
+**[🎬 Watch on YouTube](https://youtu.be/IxOuAzmN9bg)** | **Duration: 5:19** | **Quality: HD**
 
-2. **🎯 High Quality Version** (20MB, Original Resolution)
-   - **[📥 Download HD](https://github.com/abhikarode/sample-ai-powered-sdlc-patterns-with-aws/raw/main/all-phases/sdlc-knowledge-management/docs/videos/SDLC_Knowledge_Management_Demo.mp4)** - Full quality version
+### **🎯 Demo Highlights**
 
-3. **💻 Local Viewing** (Best Experience)
-   ```bash
-   # Clone repository and watch locally
-   git clone https://github.com/abhikarode/sample-ai-powered-sdlc-patterns-with-aws.git
-   cd sample-ai-powered-sdlc-patterns-with-aws/all-phases/sdlc-knowledge-management/docs/videos
-   open SDLC_Knowledge_Management_Demo.mp4  # macOS
-   xdg-open SDLC_Knowledge_Management_Demo.mp4  # Linux
-   ```
+| Timestamp | Feature | Description |
+|-----------|---------|-------------|
+| **0:00** | 🏠 **System Overview** | Introduction to the SDLC Knowledge Management platform |
+| **0:30** | 🔐 **Authentication** | Secure login with AWS Cognito OAuth 2.0 |
+| **1:00** | 📤 **Document Upload** | Drag-and-drop file upload with real-time processing |
+| **2:00** | 🤖 **AI-Powered Chat** | RAG-powered conversations with source citations |
+| **3:30** | 📋 **Document Management** | View, organize, and manage document library |
+| **4:00** | 👨‍💼 **Admin Dashboard** | System metrics, monitoring, and user management |
+| **4:30** | ⚡ **Performance Demo** | Sub-10 second AI response times in action |
 
-4. **⚡ Quick Download** (Command Line)
-   ```bash
-   # Download compressed version (7.9MB)
-   curl -L -o demo.mp4 "https://github.com/abhikarode/sample-ai-powered-sdlc-patterns-with-aws/raw/main/all-phases/sdlc-knowledge-management/docs/videos/SDLC_Knowledge_Management_Demo_compressed.mp4"
-   open demo.mp4
-   ```
+### **💡 Alternative Access Options**
 
-**💡 Quick Preview:**
-Instead of the full video, here are key screenshots showing the main features:
+If you prefer offline viewing or need the raw video files:
 
-| Feature | Screenshot |
-|---------|------------|
-| 🏠 **Dashboard** | *Clean, modern interface with navigation* |
-| 📤 **Document Upload** | *Drag-and-drop file upload with progress* |
-| 💬 **AI Chat** | *Conversational interface with source citations* |
-| 📋 **Document Management** | *List view with status and metadata* |
-| 👨‍💼 **Admin Panel** | *System metrics and user management* |
+- **[📥 Download HD Version](https://github.com/abhikarode/sample-ai-powered-sdlc-patterns-with-aws/raw/main/all-phases/sdlc-knowledge-management/docs/videos/SDLC_Knowledge_Management_Demo.mp4)** (20MB, Original Quality)
+- **[📥 Download Compressed](https://github.com/abhikarode/sample-ai-powered-sdlc-patterns-with-aws/raw/main/all-phases/sdlc-knowledge-management/docs/videos/SDLC_Knowledge_Management_Demo_compressed.mp4)** (7.9MB, Web Optimized)
 
-### **🎯 What You'll See in the Demo**
-- 📤 **Document Upload & Processing** - Upload documents and automatic Knowledge Base synchronization
-- 💬 **AI-Powered Chat** - Ask questions about your documents with RAG-powered responses  
-- 📋 **Document Management** - View, organize, and manage uploaded documents
-- 👨‍💼 **Admin Dashboard** - System monitoring and user management
-- 🔒 **Authentication Flow** - Secure login with AWS Cognito
-- ⚡ **Real-time Performance** - Sub-10 second AI response times
-- 🎨 **Modern UI/UX** - Clean, responsive React interface
+### **✨ Key Features Demonstrated**
+
+- 🔐 **Enterprise Authentication** - AWS Cognito with OAuth 2.0 integration
+- 📚 **Intelligent Document Processing** - Automatic Knowledge Base sync and vector indexing
+- 🤖 **Conversational AI** - Claude Sonnet 4 with RAG-powered responses and source citations
+- 📊 **Real-time Monitoring** - Live system metrics and performance dashboards
+- 🎨 **Modern Architecture** - Serverless, scalable, and cost-optimized AWS infrastructure
+- ⚡ **Production Performance** - Sub-10 second response times with global CDN delivery
+
+> **💡 Pro Tip**: Use the timestamp links above to jump directly to specific features you're most interested in!
 
 > **💡 Tip**: Watch the demo first to understand the system capabilities before diving into the deployment guide below.
 
