@@ -2,6 +2,45 @@
 
 This repository contains a **sample SDLC Knowledge Management implementation** built with AWS services, demonstrating AI-powered document management and conversational AI capabilities using Amazon Bedrock Knowledge Base with Claude Sonnet 4.
 
+## 🎬 **Demo Video**
+
+See the SDLC Knowledge Management system in action! This 5-minute demo showcases the key features including document upload, AI-powered chat, and admin dashboard:
+
+### **📺 Watch the Demo**
+
+<video width="800" controls>
+  <source src="./docs/videos/SDLC_Knowledge_Management_Demo.mp4" type="video/mp4">
+  Your browser does not support the video tag. <a href="./docs/videos/SDLC_Knowledge_Management_Demo.mp4">Download the demo video</a>
+</video>
+
+**Alternative Viewing Options:**
+- **[📥 Direct Download (MP4, 20MB)](./docs/videos/SDLC_Knowledge_Management_Demo.mp4)** - Right-click and "Save As"
+- **[🔗 View in GitHub](./docs/videos/SDLC_Knowledge_Management_Demo.mp4)** - Click to open in GitHub's video player
+
+**Local Viewing:**
+```bash
+# Clone the repository and open the video locally
+git clone https://github.com/abhikarode/sample-ai-powered-sdlc-patterns-with-aws.git
+open all-phases/sdlc-knowledge-management/docs/videos/SDLC_Knowledge_Management_Demo.mp4
+```
+
+### **🎯 What You'll See in the Demo**
+- 📤 **Document Upload & Processing** - Upload documents and automatic Knowledge Base synchronization
+- 💬 **AI-Powered Chat** - Ask questions about your documents with RAG-powered responses  
+- 📋 **Document Management** - View, organize, and manage uploaded documents
+- 👨‍💼 **Admin Dashboard** - System monitoring and user management
+- 🔒 **Authentication Flow** - Secure login with AWS Cognito
+- ⚡ **Real-time Performance** - Sub-10 second AI response times
+- 🎨 **Modern UI/UX** - Clean, responsive React interface
+
+> **💡 Tip**: Watch the demo first to understand the system capabilities before diving into the deployment guide below.
+
+**📋 Video Details:**
+- **Duration**: 5 minutes 19 seconds
+- **Resolution**: 2556x956 (High-resolution screen recording)
+- **File Size**: 20MB (MP4, H.264 encoded)
+- **Content**: Complete walkthrough of all major features
+
 ## 🔒 **Security & Compliance Notice**
 
 **Important**: This is sample code for educational and demonstration purposes. AWS services are designed to be secure, but security IN the cloud is your responsibility under the [AWS Shared Responsibility Model](https://aws.amazon.com/compliance/shared-responsibility-model/).
