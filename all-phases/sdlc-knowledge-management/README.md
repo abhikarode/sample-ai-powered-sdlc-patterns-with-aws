@@ -6,23 +6,49 @@ This repository contains a **sample SDLC Knowledge Management implementation** b
 
 See the SDLC Knowledge Management system in action! This 5-minute demo showcases the key features including document upload, AI-powered chat, and admin dashboard:
 
-### **📺 Watch the Demo**
+### **📺 How to Watch the Demo**
 
-<video width="800" controls>
-  <source src="./docs/videos/SDLC_Knowledge_Management_Demo.mp4" type="video/mp4">
-  Your browser does not support the video tag. <a href="./docs/videos/SDLC_Knowledge_Management_Demo.mp4">Download the demo video</a>
-</video>
+**🎯 Choose Your Preferred Option:**
 
-**Alternative Viewing Options:**
-- **[📥 Direct Download (MP4, 20MB)](./docs/videos/SDLC_Knowledge_Management_Demo.mp4)** - Right-click and "Save As"
-- **[🔗 View in GitHub](./docs/videos/SDLC_Knowledge_Management_Demo.mp4)** - Click to open in GitHub's video player
+1. **🎬 Embedded Player** (Recommended - 7.9MB, 720p)
+   
+   <video width="800" controls>
+     <source src="./docs/videos/SDLC_Knowledge_Management_Demo_compressed.mp4" type="video/mp4">
+     Your browser does not support the video tag. <a href="./docs/videos/SDLC_Knowledge_Management_Demo_compressed.mp4">Download the demo video</a>
+   </video>
+   
+   - **[📺 GitHub Player](./docs/videos/SDLC_Knowledge_Management_Demo_compressed.mp4)** - Click to view in GitHub
+   - **[📥 Download](https://github.com/abhikarode/sample-ai-powered-sdlc-patterns-with-aws/raw/main/all-phases/sdlc-knowledge-management/docs/videos/SDLC_Knowledge_Management_Demo_compressed.mp4)** - Right-click "Save As"
 
-**Local Viewing:**
-```bash
-# Clone the repository and open the video locally
-git clone https://github.com/abhikarode/sample-ai-powered-sdlc-patterns-with-aws.git
-open all-phases/sdlc-knowledge-management/docs/videos/SDLC_Knowledge_Management_Demo.mp4
-```
+2. **🎯 High Quality Version** (20MB, Original Resolution)
+   - **[📥 Download HD](https://github.com/abhikarode/sample-ai-powered-sdlc-patterns-with-aws/raw/main/all-phases/sdlc-knowledge-management/docs/videos/SDLC_Knowledge_Management_Demo.mp4)** - Full quality version
+
+3. **💻 Local Viewing** (Best Experience)
+   ```bash
+   # Clone repository and watch locally
+   git clone https://github.com/abhikarode/sample-ai-powered-sdlc-patterns-with-aws.git
+   cd sample-ai-powered-sdlc-patterns-with-aws/all-phases/sdlc-knowledge-management/docs/videos
+   open SDLC_Knowledge_Management_Demo.mp4  # macOS
+   xdg-open SDLC_Knowledge_Management_Demo.mp4  # Linux
+   ```
+
+4. **⚡ Quick Download** (Command Line)
+   ```bash
+   # Download compressed version (7.9MB)
+   curl -L -o demo.mp4 "https://github.com/abhikarode/sample-ai-powered-sdlc-patterns-with-aws/raw/main/all-phases/sdlc-knowledge-management/docs/videos/SDLC_Knowledge_Management_Demo_compressed.mp4"
+   open demo.mp4
+   ```
+
+**💡 Quick Preview:**
+Instead of the full video, here are key screenshots showing the main features:
+
+| Feature | Screenshot |
+|---------|------------|
+| 🏠 **Dashboard** | *Clean, modern interface with navigation* |
+| 📤 **Document Upload** | *Drag-and-drop file upload with progress* |
+| 💬 **AI Chat** | *Conversational interface with source citations* |
+| 📋 **Document Management** | *List view with status and metadata* |
+| 👨‍💼 **Admin Panel** | *System metrics and user management* |
 
 ### **🎯 What You'll See in the Demo**
 - 📤 **Document Upload & Processing** - Upload documents and automatic Knowledge Base synchronization
@@ -37,8 +63,10 @@ open all-phases/sdlc-knowledge-management/docs/videos/SDLC_Knowledge_Management_
 
 **📋 Video Details:**
 - **Duration**: 5 minutes 19 seconds
-- **Resolution**: 2556x956 (High-resolution screen recording)
-- **File Size**: 20MB (MP4, H.264 encoded)
+- **Versions Available**: 
+  - Compressed: 7.9MB (1280x720, optimized for web viewing)
+  - Original: 20MB (2556x956, high-resolution screen recording)
+- **Format**: MP4, H.264 encoded with AAC audio
 - **Content**: Complete walkthrough of all major features
 
 ## 🔒 **Security & Compliance Notice**
