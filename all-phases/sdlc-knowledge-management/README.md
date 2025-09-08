@@ -1,6 +1,6 @@
-# AI Assistant - Sample Implementation
+# SDLC Knowledge Management - Sample Implementation
 
-This repository contains a **sample AI Assistant implementation** built with AWS services, demonstrating AI-powered document management and conversational AI capabilities using Amazon Bedrock Knowledge Base with Claude Sonnet 4.
+This repository contains a **sample SDLC Knowledge Management implementation** built with AWS services, demonstrating AI-powered document management and conversational AI capabilities using Amazon Bedrock Knowledge Base with Claude Sonnet 4.
 
 ## 🔒 **Security & Compliance Notice**
 
@@ -28,7 +28,7 @@ This repository contains a **sample AI Assistant implementation** built with AWS
 ### **Complete Architecture Overview**
 ![AI Assistant Architecture](./generated-diagrams/ai-assistant-architecture.png)
 
-Our AI Assistant follows a modern serverless architecture with clear separation of concerns across multiple layers:
+Our SDLC Knowledge Management system follows a modern serverless architecture with clear separation of concerns across multiple layers:
 
 - **🎨 Frontend Layer**: React TypeScript SPA with global CloudFront distribution
 - **🔐 API & Auth Layer**: API Gateway with Cognito User Pool authorization
@@ -143,7 +143,7 @@ terraform apply tfplan
 
 # 3. Get your CloudFront URL
 export CLOUDFRONT_URL=$(terraform output -raw cloudfront_url)
-echo "Your AI Assistant is available at: $CLOUDFRONT_URL"
+echo "Your SDLC Knowledge Management system is available at: $CLOUDFRONT_URL"
 
 # 4. Deploy frontend application
 cd ../frontend
@@ -376,15 +376,15 @@ cd terraform && terraform init && terraform apply
 
 # 2. Get your CloudFront URL
 CLOUDFRONT_URL=$(terraform output -raw cloudfront_url)
-echo "🌐 Your AI Assistant URL: $CLOUDFRONT_URL"
+echo "🌐 Your SDLC Knowledge Management URL: $CLOUDFRONT_URL"
 
-# 3. Access your AI Assistant
+# 3. Access your SDLC Knowledge Management system
 open $CLOUDFRONT_URL
 
 # 4. Start chatting with your documents!
 ```
 
-**🎉 Congratulations!** You now have a functional AI Assistant sample running on AWS with document management and conversational AI capabilities.
+**🎉 Congratulations!** You now have a functional SDLC Knowledge Management system running on AWS with document management and conversational AI capabilities.
 
 ### **📋 Quick Access Commands**
 ```bash

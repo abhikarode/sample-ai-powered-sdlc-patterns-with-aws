@@ -134,7 +134,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div className="p-4 border-t border-white/10">
             <div className="text-center">
               <p className="text-xs text-white/40">
-                AI Assistant v1.0
+                SDLC Knowledge v1.0
               </p>
               <p className="text-xs text-white/40">
                 Powered by Amazon Bedrock

@@ -58,7 +58,7 @@ async function testCloudFrontPageLoadPerformance() {
     throw new Error('Page failed to load - no content captured');
   }
   
-  if (snapshot.includes('AI Assistant') || snapshot.includes('Chat') || snapshot.includes('Login')) {
+  if (snapshot.includes('SDLC Knowledge') || snapshot.includes('Chat') || snapshot.includes('Login')) {
     console.log('✅ Page content loaded successfully');
   } else {
     console.log('⚠️ Page content may not have loaded completely');
@@ -80,7 +80,7 @@ async function testKnowledgeBaseQueryPerformance() {
   
   const snapshot = await mcp_playwright_browser_snapshot();
   
-  if (snapshot.includes('AI Assistant') || snapshot.includes('Chat') || 
+  if (snapshot.includes('SDLC Knowledge') || snapshot.includes('Chat') || 
       snapshot.includes('Ask me anything')) {
     
     try {
@@ -144,7 +144,7 @@ async function testChatInterfaceResponsiveness() {
   
   const snapshot = await mcp_playwright_browser_snapshot();
   
-  if (snapshot.includes('AI Assistant') || snapshot.includes('Chat')) {
+  if (snapshot.includes('SDLC Knowledge') || snapshot.includes('Chat')) {
     try {
       const responseStartTime = Date.now();
       
@@ -323,7 +323,7 @@ async function testConcurrentUsersPerformance() {
       console.log('✅ Concurrent users performance test completed successfully');
       
       // Check if application remains responsive
-      if (concurrentSnapshot.includes('AI Assistant') || concurrentSnapshot.includes('Chat') ||
+      if (concurrentSnapshot.includes('SDLC Knowledge') || concurrentSnapshot.includes('Chat') ||
           concurrentSnapshot.includes('Login')) {
         console.log('✅ Application remains responsive under concurrent load');
       }

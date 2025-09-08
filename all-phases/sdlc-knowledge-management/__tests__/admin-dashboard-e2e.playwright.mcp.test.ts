@@ -70,7 +70,7 @@ async function authenticateAsAdmin(): Promise<boolean> {
       const authSnapshot = await mcp_playwright_browser_snapshot();
       
       if (authSnapshot.includes('Admin') || authSnapshot.includes('Dashboard') || 
-          authSnapshot.includes('AI Assistant')) {
+          authSnapshot.includes('SDLC Knowledge')) {
         console.log('✅ Admin authentication successful');
         return true;
       } else if (authSnapshot.includes('Invalid') || authSnapshot.includes('error')) {

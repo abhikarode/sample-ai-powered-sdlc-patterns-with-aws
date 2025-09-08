@@ -1,10 +1,10 @@
-# AI Assistant Frontend
+# SDLC Knowledge Management Frontend
 
-React TypeScript application for the AI-powered software development assistant.
+React TypeScript application for the AI-powered SDLC knowledge management system.
 
 ## Overview
 
-This frontend provides a modern, responsive interface for interacting with the AI Assistant's Knowledge Base. Built with React, TypeScript, and AWS Amplify for authentication.
+This frontend provides a modern, responsive interface for interacting with the SDLC Knowledge Management system's Knowledge Base. Built with React, TypeScript, and AWS Amplify for authentication.
 
 ## Architecture
 
@@ -17,7 +17,7 @@ This frontend provides a modern, responsive interface for interacting with the A
 ## Key Features
 
 - 🔐 **Secure Authentication** - AWS Cognito integration with role-based access
-- 💬 **Real-time Chat** - Interactive chat interface with AI assistant
+- 💬 **Real-time Chat** - Interactive chat interface with SDLC knowledge system
 - 📄 **Document Management** - Upload and manage team documents
 - 👨‍💼 **Admin Dashboard** - Administrative controls for knowledge base management
 - 📱 **Responsive Design** - Works on desktop and tablet devices
@@ -56,7 +56,7 @@ REACT_APP_COGNITO_USER_POOL_DOMAIN=ai-assistant-auth-xxxxxxxx
 REACT_APP_API_GATEWAY_URL=https://xxxxxxxxxx.execute-api.us-west-2.amazonaws.com/dev
 REACT_APP_CLOUDFRONT_URL=https://xxxxxxxxxx.cloudfront.net
 REACT_APP_ENVIRONMENT=dev
-REACT_APP_PROJECT_NAME=ai-assistant
+REACT_APP_PROJECT_NAME=sdlc-knowledge-management
 ```
 
 ### AWS Configuration
@@ -203,4 +203,4 @@ Enable debug mode by setting `REACT_APP_ENVIRONMENT=dev` for additional logging.
 
 ## License
 
-This project is part of the AI Assistant system and follows the same licensing terms.
+This project is part of the SDLC Knowledge Management system and follows the same licensing terms.

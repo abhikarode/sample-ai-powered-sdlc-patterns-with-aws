@@ -184,7 +184,7 @@ export default {
 
 // Configuration constants
 export const CONFIG_CONSTANTS = {
-  APP_NAME: 'AI Assistant',
+  APP_NAME: 'SDLC Knowledge Management',
   APP_VERSION: '1.0.0',
   SUPPORTED_LANGUAGES: ['en'],
   DEFAULT_LANGUAGE: 'en',

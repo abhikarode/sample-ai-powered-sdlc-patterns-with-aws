@@ -1,6 +1,6 @@
 # End-to-End Tests using Playwright MCP Server
 
-This directory contains comprehensive end-to-end tests for the AI Assistant application using **ONLY** Playwright MCP server tools. These tests validate the complete application workflow against deployed AWS infrastructure.
+This directory contains comprehensive end-to-end tests for the SDLC Knowledge Management application using **ONLY** Playwright MCP server tools. These tests validate the complete application workflow against deployed AWS infrastructure.
 
 ## 🚨 CRITICAL REQUIREMENTS
 
@@ -241,4 +241,4 @@ To add new test scenarios:
 
 ---
 
-**Note**: These tests are designed to validate the complete AI Assistant application against real AWS infrastructure using only Playwright MCP server tools. No mocking, stubbing, or simulation is used - all tests interact with actual deployed services.
+**Note**: These tests are designed to validate the complete SDLC Knowledge Management application against real AWS infrastructure using only Playwright MCP server tools. No mocking, stubbing, or simulation is used - all tests interact with actual deployed services.

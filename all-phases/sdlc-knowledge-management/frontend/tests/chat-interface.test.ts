@@ -29,7 +29,7 @@ describe('Chat Interface with Knowledge Base Integration', () => {
     const snapshot = await mcp_playwright_browser_snapshot();
     
     // Verify chat interface elements are present
-    expect(snapshot).toContain('AI Assistant');
+    expect(snapshot).toContain('SDLC Knowledge');
     expect(snapshot).toContain('Ask me anything about your documents');
     expect(snapshot).toContain('Type your message');
   });
@@ -263,21 +263,21 @@ describe('Chat Interface with Knowledge Base Integration', () => {
     await mcp_playwright_browser_wait_for({ time: 1 });
     
     let responsiveSnapshot = await mcp_playwright_browser_snapshot();
-    expect(responsiveSnapshot).toContain('AI Assistant');
+    expect(responsiveSnapshot).toContain('SDLC Knowledge');
     
     // Test tablet view
     await mcp_playwright_browser_resize({ width: 768, height: 1024 });
     await mcp_playwright_browser_wait_for({ time: 1 });
     
     responsiveSnapshot = await mcp_playwright_browser_snapshot();
-    expect(responsiveSnapshot).toContain('AI Assistant');
+    expect(responsiveSnapshot).toContain('SDLC Knowledge');
     
     // Test mobile view
     await mcp_playwright_browser_resize({ width: 375, height: 667 });
     await mcp_playwright_browser_wait_for({ time: 1 });
     
     responsiveSnapshot = await mcp_playwright_browser_snapshot();
-    expect(responsiveSnapshot).toContain('AI Assistant');
+    expect(responsiveSnapshot).toContain('SDLC Knowledge');
   });
 });
 

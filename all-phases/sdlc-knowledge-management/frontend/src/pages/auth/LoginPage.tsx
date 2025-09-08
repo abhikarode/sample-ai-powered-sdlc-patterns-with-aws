@@ -108,7 +108,7 @@ export const LoginPage: React.FC = () => {
                 transition={{ delay: 0.3, duration: 0.6 }}
                 className="text-4xl lg:text-6xl font-bold bg-gradient-to-r from-white via-purple-200 to-pink-200 bg-clip-text text-transparent"
               >
-                AI Assistant
+                SDLC Knowledge Management
               </motion.h1>
               
               <motion.p
@@ -158,7 +158,7 @@ export const LoginPage: React.FC = () => {
             <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl p-8 shadow-2xl shadow-black/20">
               <div className="text-center mb-8">
                 <h2 className="text-2xl font-bold text-white mb-2">Welcome Back</h2>
-                <p className="text-white/60">Sign in to access your AI assistant</p>
+                <p className="text-white/60">Sign in to access your SDLC knowledge management system</p>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-6">

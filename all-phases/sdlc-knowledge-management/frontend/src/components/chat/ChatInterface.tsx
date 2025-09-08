@@ -204,7 +204,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       {/* Chat Header */}
       <div className="flex items-center justify-between p-4 border-b border-white/10">
         <div>
-          <h2 className="text-lg font-semibold text-white">AI Assistant</h2>
+          <h2 className="text-lg font-semibold text-white">SDLC Knowledge</h2>
           <p className="text-sm text-white/60">
             {conversationId ? 'Continuing conversation' : 'Ask me anything about your documents'}
           </p>

@@ -1,5 +1,5 @@
 // Chat Page Component
-// Main chat interface for AI assistant
+// Main chat interface for SDLC knowledge management
 
 import { ChatInterface } from '@/components/chat';
 import { motion } from 'framer-motion';
@@ -23,7 +23,7 @@ export const ChatPage: React.FC = () => {
         transition={{ duration: 0.5 }}
         className="text-center space-y-2"
       >
-        <h1 className="text-3xl font-bold text-white">AI Assistant Chat</h1>
+        <h1 className="text-3xl font-bold text-white">SDLC Knowledge Chat</h1>
         <p className="text-white/60">
           Ask questions about your uploaded documents and get intelligent responses with source citations
         </p>

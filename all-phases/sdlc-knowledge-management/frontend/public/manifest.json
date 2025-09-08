@@ -1,7 +1,7 @@
 {
-  "short_name": "AI Assistant",
-  "name": "AI Assistant - Development Team Knowledge Base",
-  "description": "AI-powered software development assistant for your team's knowledge base",
+  "short_name": "SDLC Knowledge",
+  "name": "SDLC Knowledge Management - Development Team Knowledge Base",
+  "description": "AI-powered SDLC knowledge management system for your team's knowledge base",
   "icons": [
     {
       "src": "favicon.ico",
@@ -33,7 +33,7 @@
     {
       "name": "New Chat",
       "short_name": "Chat",
-      "description": "Start a new conversation with the AI assistant",
+      "description": "Start a new conversation with the SDLC knowledge system",
       "url": "/chat/new",
       "icons": [
         {

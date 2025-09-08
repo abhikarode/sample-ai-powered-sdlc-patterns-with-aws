@@ -1,5 +1,5 @@
 {
-  "name": "ai-assistant-knowledge-base-tests",
+  "name": "sdlc-knowledge-management-tests",
   "version": "1.0.0",
   "description": "Knowledge Base Integration Tests using Playwright MCP against deployed AWS infrastructure",
   "scripts": {

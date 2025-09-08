@@ -52,7 +52,7 @@ async function testChatInterfaceLayout(): Promise<void> {
     const snapshot = await mcp_playwright_browser_snapshot();
     
     // Verify essential chat interface elements
-    const hasAIAssistantHeader = snapshot.includes('AI Assistant Chat');
+    const hasSDLCKnowledgeHeader = snapshot.includes('SDLC Knowledge Chat');
     const hasChatInput = snapshot.includes('Ask a question about your documents');
     const hasNewChatButton = snapshot.includes('New Chat');
     const hasTipsSection = snapshot.includes('Tips for better results');
@@ -220,14 +220,14 @@ async function testResponsiveDesign(): Promise<void> {
     await mcp_playwright_browser_wait_for({ time: 2 });
     
     let snapshot = await mcp_playwright_browser_snapshot();
-    const desktopWorking = snapshot.includes('AI Assistant Chat');
+    const desktopWorking = snapshot.includes('SDLC Knowledge Chat');
     
     // Test tablet view
     await mcp_playwright_browser_resize({ width: 768, height: 1024 });
     await mcp_playwright_browser_wait_for({ time: 2 });
     
     snapshot = await mcp_playwright_browser_snapshot();
-    const tabletWorking = snapshot.includes('AI Assistant Chat');
+    const tabletWorking = snapshot.includes('SDLC Knowledge Chat');
     const hasMobileMenu = snapshot.includes('button'); // Mobile menu buttons
     
     // Test mobile view
@@ -235,7 +235,7 @@ async function testResponsiveDesign(): Promise<void> {
     await mcp_playwright_browser_wait_for({ time: 2 });
     
     snapshot = await mcp_playwright_browser_snapshot();
-    const mobileWorking = snapshot.includes('AI Assistant Chat');
+    const mobileWorking = snapshot.includes('SDLC Knowledge Chat');
     
     const responsiveWorking = desktopWorking && tabletWorking && mobileWorking;
     

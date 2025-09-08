@@ -294,7 +294,7 @@ async function testBasicFunctionalityInArea(area, snapshot) {
         break;
         
       default:
-        if (snapshot.includes('AI Assistant') || snapshot.includes('Welcome')) {
+        if (snapshot.includes('SDLC Knowledge') || snapshot.includes('Welcome')) {
           console.log(`  ✅ ${area.name}: Basic page elements present`);
         }
         break;

@@ -53,7 +53,7 @@ async function testAuthenticationInterface() {
         snapshot.includes('Sign up')) {
       console.log('✅ Cognito authentication features detected');
     }
-  } else if (snapshot.includes('AI Assistant') || snapshot.includes('Chat')) {
+  } else if (snapshot.includes('SDLC Knowledge') || snapshot.includes('Chat')) {
     console.log('⚠️ User may already be authenticated - testing logout flow');
     
     // Try to find logout functionality

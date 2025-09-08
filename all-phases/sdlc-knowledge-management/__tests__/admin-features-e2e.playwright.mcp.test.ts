@@ -75,7 +75,7 @@ async function authenticateAsAdmin(): Promise<boolean> {
       const authSnapshot = await mcp_playwright_browser_snapshot();
       
       if (authSnapshot.includes('Admin') || authSnapshot.includes('Dashboard') || 
-          authSnapshot.includes('AI Assistant')) {
+          authSnapshot.includes('SDLC Knowledge')) {
         console.log('✅ Admin authentication successful for features testing');
         return true;
       }

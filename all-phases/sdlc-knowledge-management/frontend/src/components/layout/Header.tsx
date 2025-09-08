@@ -23,7 +23,7 @@ export const Header: React.FC<HeaderProps> = ({
               <Brain className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-white">AI Assistant</h1>
+              <h1 className="text-xl font-bold text-white">SDLC Knowledge</h1>
               <p className="text-xs text-white/60">Development Team Knowledge Base</p>
             </div>
           </div>

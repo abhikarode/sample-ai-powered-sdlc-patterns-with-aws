@@ -24,7 +24,7 @@ variable "knowledge_base_name" {
 variable "knowledge_base_description" {
   description = "Description of the Bedrock Knowledge Base"
   type        = string
-  default     = "AI Assistant Knowledge Base for document retrieval and generation"
+  default     = "SDLC Knowledge Management Knowledge Base for document retrieval and generation"
 }
 
 variable "knowledge_base_role_arn" {

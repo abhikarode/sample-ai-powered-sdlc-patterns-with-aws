@@ -83,27 +83,27 @@ export const ROUTE_CONFIG: Record<string, RouteMetadata> = {
     description: 'Sign in to your account',
     requiresAuth: false,
     showInNavigation: false,
-    seoTitle: 'Login - AI Assistant',
-    seoDescription: 'Sign in to access your AI-powered development assistant'
+    seoTitle: 'Login - SDLC Knowledge Management',
+    seoDescription: 'Sign in to access your AI-powered SDLC knowledge management system'
   },
   
   [ROUTES.HOME]: {
     path: ROUTES.HOME,
     title: 'Home',
-    description: 'AI Assistant Dashboard',
+    description: 'SDLC Knowledge Management Dashboard',
     requiresAuth: true,
     showInNavigation: true,
     navigationLabel: 'Home',
     navigationIcon: 'home',
     navigationOrder: 1,
-    seoTitle: 'AI Assistant - Development Team Knowledge Base',
-    seoDescription: 'Access your team\'s knowledge base with AI-powered assistance'
+    seoTitle: 'SDLC Knowledge Management - Development Team Knowledge Base',
+    seoDescription: 'Access your team\'s knowledge base with AI-powered SDLC assistance'
   },
   
   [ROUTES.CHAT]: {
     path: ROUTES.CHAT,
     title: 'Chat',
-    description: 'Chat with AI Assistant',
+    description: 'Chat with SDLC Knowledge System',
     requiresAuth: true,
     showInNavigation: true,
     navigationLabel: 'Chat',
@@ -113,7 +113,7 @@ export const ROUTE_CONFIG: Record<string, RouteMetadata> = {
       { label: 'Home', path: ROUTES.HOME },
       { label: 'Chat' }
     ],
-    seoTitle: 'Chat - AI Assistant',
+    seoTitle: 'Chat - SDLC Knowledge Management',
     seoDescription: 'Ask questions about your team\'s documentation and get instant AI-powered answers'
   },
   
@@ -143,7 +143,7 @@ export const ROUTE_CONFIG: Record<string, RouteMetadata> = {
       { label: 'Home', path: ROUTES.HOME },
       { label: 'Documents' }
     ],
-    seoTitle: 'Documents - AI Assistant',
+    seoTitle: 'Documents - SDLC Knowledge Management',
     seoDescription: 'Upload and manage your team\'s documentation for AI-powered search'
   },
   
@@ -187,7 +187,7 @@ export const ROUTE_CONFIG: Record<string, RouteMetadata> = {
       { label: 'Home', path: ROUTES.HOME },
       { label: 'Administration' }
     ],
-    seoTitle: 'Administration - AI Assistant',
+    seoTitle: 'Administration - SDLC Knowledge Management',
     seoDescription: 'Manage users, knowledge base, and system settings'
   },
   
@@ -254,7 +254,7 @@ export const ROUTE_CONFIG: Record<string, RouteMetadata> = {
     description: 'Access denied',
     requiresAuth: false,
     showInNavigation: false,
-    seoTitle: 'Unauthorized - AI Assistant',
+    seoTitle: 'Unauthorized - SDLC Knowledge Management',
     seoDescription: 'You do not have permission to access this resource'
   },
   

@@ -65,7 +65,7 @@ export const HomePage: React.FC = () => {
           Welcome back{authState.user?.email ? `, ${authState.user.email.split('@')[0]}` : ''}!
         </h1>
         <p className="text-xl text-white/70 max-w-2xl mx-auto">
-          Your AI-powered development assistant is ready to help you find answers from your team's knowledge base.
+          Your SDLC Knowledge Management system is ready to help you find answers from your team's knowledge base.
         </p>
       </motion.div>
 

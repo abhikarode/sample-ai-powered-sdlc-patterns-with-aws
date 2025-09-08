@@ -30,8 +30,8 @@ async function testChatInterfaceLayout() {
   console.log('Chat interface loaded successfully');
   
   // Verify essential chat elements are present
-  if (!snapshot.includes('AI Assistant')) {
-    throw new Error('AI Assistant header not found in deployed application');
+  if (!snapshot.includes('SDLC Knowledge')) {
+    throw new Error('SDLC Knowledge header not found in deployed application');
   }
   
   if (!snapshot.includes('Ask me anything')) {
@@ -307,7 +307,7 @@ async function testResponsiveDesign() {
   await mcp_playwright_browser_wait_for({ time: 2 });
   
   let responsiveSnapshot = await mcp_playwright_browser_snapshot();
-  if (responsiveSnapshot.includes('AI Assistant')) {
+  if (responsiveSnapshot.includes('SDLC Knowledge')) {
     console.log('✅ Desktop view working');
   }
   
@@ -316,7 +316,7 @@ async function testResponsiveDesign() {
   await mcp_playwright_browser_wait_for({ time: 2 });
   
   responsiveSnapshot = await mcp_playwright_browser_snapshot();
-  if (responsiveSnapshot.includes('AI Assistant')) {
+  if (responsiveSnapshot.includes('SDLC Knowledge')) {
     console.log('✅ Tablet view working');
   }
   
@@ -325,7 +325,7 @@ async function testResponsiveDesign() {
   await mcp_playwright_browser_wait_for({ time: 2 });
   
   responsiveSnapshot = await mcp_playwright_browser_snapshot();
-  if (responsiveSnapshot.includes('AI Assistant')) {
+  if (responsiveSnapshot.includes('SDLC Knowledge')) {
     console.log('✅ Mobile view working');
   }
   
