@@ -77,6 +77,7 @@ async function loadAwsProfiles() {
       if (p === 'default') opt.selected = true;
       sel.appendChild(opt);
     });
+    sel.addEventListener('change', saveFormState);
   } catch {}
 }
 
@@ -419,7 +420,37 @@ function unlockUI() {
   $('#btn-cancel').disabled = true;
 }
 
-// ── Dark/Light Theme Toggle ──
+// ── Form State Persistence ──
+const FORM_FIELDS = [
+  '#input-cwd', '#input-prompt', '#input-max-iter', '#input-max-cost',
+  '#input-delay', '#input-agent', '#input-plan-desc', '#select-branch'
+];
+
+function saveFormState() {
+  const state = {};
+  FORM_FIELDS.forEach(sel => {
+    const el = $(sel);
+    if (el) state[sel] = el.value;
+  });
+  try { localStorage.setItem('ralph-form', JSON.stringify(state)); } catch {}
+}
+
+function restoreFormState() {
+  try {
+    const state = JSON.parse(localStorage.getItem('ralph-form') || '{}');
+    FORM_FIELDS.forEach(sel => {
+      const el = $(sel);
+      if (el && state[sel] !== undefined) el.value = state[sel];
+    });
+  } catch {}
+}
+
+// Auto-save on any input change
+FORM_FIELDS.forEach(sel => {
+  const el = $(sel);
+  if (el) el.addEventListener('input', saveFormState);
+  if (el) el.addEventListener('change', saveFormState);
+});
 function initTheme() {
   const saved = localStorage.getItem('ralph-theme') || 'dark';
   document.documentElement.setAttribute('data-theme', saved);
@@ -443,7 +474,7 @@ $('#btn-set-cwd').addEventListener('click', async () => {
   try {
     const res = await fetch('/api/set-cwd', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({cwd}) });
     const data = await res.json();
-    if (data.ok) { appendFeed('system', `Project: ${data.cwd}`); await loadProjectData(); setStep(2); }
+    if (data.ok) { appendFeed('system', `Project: ${data.cwd}`); saveFormState(); await loadProjectData(); setStep(2); }
     else appendFeed('error', data.error || 'Failed');
   } catch (e) { appendFeed('error', e.message); }
   unlockUI();
@@ -583,7 +614,15 @@ $$('.prd-tab').forEach(tab => {
 
 // ── Init ──
 connectWs();
-loadAwsProfiles();
+loadAwsProfiles().then(() => {
+  // Restore AWS profile selection after profiles are loaded
+  try {
+    const state = JSON.parse(localStorage.getItem('ralph-form') || '{}');
+    const sel = $('#select-aws-profile');
+    if (sel && state['#select-aws-profile']) sel.value = state['#select-aws-profile'];
+  } catch {}
+});
+restoreFormState();
 initTheme();
 setStep(1);
 setTimeout(loadProjectData, 500);
